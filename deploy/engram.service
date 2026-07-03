@@ -1,0 +1,22 @@
+[Unit]
+Description=ENGRAM neural memory engine (Qwen Cloud powered)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=engram
+Group=engram
+EnvironmentFile=/etc/engram/engram.env
+Environment=ENGRAM_DB=/var/lib/engram/engram.db
+ExecStart=/usr/bin/python3 /opt/engram/backend/server.py
+Restart=always
+RestartSec=3
+MemoryLimit=180M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/engram
+
+[Install]
+WantedBy=multi-user.target

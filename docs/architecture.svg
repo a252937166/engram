@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="860" viewBox="0 0 1280 860" font-family="Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="hdr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff2d78"/><stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity=".28"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/>
+    </marker>
+    <marker id="arrp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ff2d78"/>
+    </marker>
+    <marker id="arrc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="860" fill="#0a0613"/>
+  <circle cx="640" cy="430" r="430" fill="url(#glow)"/>
+
+  <text x="48" y="58" font-size="26" font-weight="bold" fill="#ffffff" letter-spacing="8">ENGRAM · ARCHITECTURE</text>
+  <text x="48" y="82" font-size="12" fill="#9088ad" letter-spacing="3">PERSISTENT MEMORY ENGINE FOR QWEN AGENTS — TRACK 1 · MEMORYAGENT</text>
+  <rect x="48" y="96" width="380" height="3" fill="url(#hdr)"/>
+
+  <!-- CLIENT -->
+  <g>
+    <rect x="48" y="150" width="250" height="150" rx="14" fill="#120b22" stroke="#8b5cf6" stroke-opacity=".55" stroke-width="1.5"/>
+    <text x="70" y="182" font-size="13" fill="#ffffff" font-weight="bold" letter-spacing="2">BROWSER SPA</text>
+    <text x="70" y="204" font-size="11" fill="#9088ad">single-file, zero-framework</text>
+    <text x="70" y="230" font-size="11" fill="#c9bfe6">· chat + SSE streaming</text>
+    <text x="70" y="250" font-size="11" fill="#c9bfe6">· live memory constellation</text>
+    <text x="70" y="270" font-size="11" fill="#c9bfe6">· retrieval score inspector</text>
+  </g>
+
+  <!-- NGINX -->
+  <g>
+    <rect x="48" y="360" width="250" height="130" rx="14" fill="#120b22" stroke="#8b5cf6" stroke-opacity=".55" stroke-width="1.5"/>
+    <text x="70" y="392" font-size="13" fill="#ffffff" font-weight="bold" letter-spacing="2">NGINX</text>
+    <text x="70" y="414" font-size="11" fill="#9088ad">engram.axiqo.xyz</text>
+    <text x="70" y="440" font-size="11" fill="#c9bfe6">· TLS (Let's Encrypt)</text>
+    <text x="70" y="460" font-size="11" fill="#c9bfe6">· rate limit 2 r/s + burst</text>
+    <text x="70" y="480" font-size="11" fill="#c9bfe6">· unbuffered SSE proxy</text>
+  </g>
+
+  <!-- SERVER -->
+  <g>
+    <rect x="420" y="330" width="300" height="190" rx="14" fill="#160d2b" stroke="#ff2d78" stroke-opacity=".65" stroke-width="1.5"/>
+    <text x="442" y="362" font-size="13" fill="#ffffff" font-weight="bold" letter-spacing="2">ENGRAM API SERVER</text>
+    <text x="442" y="382" font-size="11" fill="#9088ad">server.py · python3 stdlib only</text>
+    <text x="442" y="408" font-size="11" fill="#c9bfe6">· /api/chat  SSE pipeline</text>
+    <text x="442" y="428" font-size="11" fill="#c9bfe6">· recall → reason → memorize</text>
+    <text x="442" y="448" font-size="11" fill="#c9bfe6">· sessions / graph / stats</text>
+    <text x="442" y="468" font-size="11" fill="#c9bfe6">· daily demo quota guard</text>
+    <text x="442" y="494" font-size="10" fill="#7a7295">systemd · 127.0.0.1:8788 · 180MB cap</text>
+  </g>
+
+  <!-- ENGINE -->
+  <g>
+    <rect x="420" y="580" width="300" height="230" rx="14" fill="#160d2b" stroke="#ff2d78" stroke-opacity=".65" stroke-width="1.5"/>
+    <text x="442" y="612" font-size="13" fill="#ffffff" font-weight="bold" letter-spacing="2">MEMORY ENGINE</text>
+    <text x="442" y="632" font-size="11" fill="#9088ad">engine.py · the cognitive core</text>
+    <text x="442" y="658" font-size="11" fill="#ffd166">RETRIEVE  hybrid score under budget</text>
+    <text x="458" y="676" font-size="10" fill="#9088ad">.55·semantic + .18·recency + .17·importance + .10·usage</text>
+    <text x="442" y="700" font-size="11" fill="#7ef2ff">REMEMBER  extract → dedupe → arbitrate</text>
+    <text x="458" y="718" font-size="10" fill="#9088ad">reinforce ≥.90 · LLM verdict: duplicate/replaces/distinct</text>
+    <text x="442" y="742" font-size="11" fill="#ff8ab5">SLEEP     consolidate clusters, forget weak</text>
+    <text x="458" y="760" font-size="10" fill="#9088ad">union-find cos≥.80 → merge · retention &lt; .28 → forget</text>
+    <text x="442" y="788" font-size="10" fill="#7a7295">SQLite WAL · 256-d float32 vectors · audit trail</text>
+  </g>
+
+  <!-- MCP -->
+  <g>
+    <rect x="48" y="580" width="250" height="150" rx="14" fill="#120b22" stroke="#22d3ee" stroke-opacity=".55" stroke-width="1.5"/>
+    <text x="70" y="612" font-size="13" fill="#ffffff" font-weight="bold" letter-spacing="2">MCP SERVER</text>
+    <text x="70" y="632" font-size="11" fill="#9088ad">mcp_server.py · stdio JSON-RPC</text>
+    <text x="70" y="658" font-size="11" fill="#c9bfe6">engram_remember · engram_recall</text>
+    <text x="70" y="678" font-size="11" fill="#c9bfe6">engram_forget · engram_sleep</text>
+    <text x="70" y="698" font-size="11" fill="#c9bfe6">→ any MCP agent mounts this memory</text>
+  </g>
+
+  <!-- QWEN CLOUD -->
+  <g>
+    <rect x="860" y="330" width="372" height="480" rx="16" fill="#0f0a20" stroke="url(#hdr)" stroke-width="2"/>
+    <text x="884" y="366" font-size="15" fill="#ffffff" font-weight="bold" letter-spacing="3">QWEN CLOUD</text>
+    <text x="884" y="386" font-size="11" fill="#9088ad">Alibaba Cloud Model Studio (intl)</text>
+    <text x="884" y="404" font-size="10" fill="#7a7295">dashscope-intl.aliyuncs.com/compatible-mode/v1</text>
+
+    <rect x="884" y="424" width="324" height="100" rx="10" fill="#1a1132" stroke="#8b5cf6" stroke-opacity=".4"/>
+    <text x="904" y="452" font-size="12" fill="#e2c7ff" font-weight="bold">qwen3.7-plus</text>
+    <text x="904" y="472" font-size="10.5" fill="#9088ad">conversational reasoning · streaming</text>
+    <text x="904" y="490" font-size="10.5" fill="#9088ad">grounded on injected MEMORY block</text>
+    <text x="904" y="508" font-size="10.5" fill="#7a7295">~800 tk memory budget vs full history</text>
+
+    <rect x="884" y="540" width="324" height="118" rx="10" fill="#1a1132" stroke="#8b5cf6" stroke-opacity=".4"/>
+    <text x="904" y="568" font-size="12" fill="#e2c7ff" font-weight="bold">qwen3.6-flash</text>
+    <text x="904" y="588" font-size="10.5" fill="#9088ad">memory extraction (typed, scored JSON)</text>
+    <text x="904" y="606" font-size="10.5" fill="#9088ad">contradiction arbiter (duplicate/replaces)</text>
+    <text x="904" y="624" font-size="10.5" fill="#9088ad">sleep-cycle cluster summarization</text>
+    <text x="904" y="644" font-size="10.5" fill="#7a7295">thinking off · temp 0.1 · JSON-only</text>
+
+    <rect x="884" y="674" width="324" height="86" rx="10" fill="#1a1132" stroke="#8b5cf6" stroke-opacity=".4"/>
+    <text x="904" y="702" font-size="12" fill="#e2c7ff" font-weight="bold">text-embedding-v4</text>
+    <text x="904" y="722" font-size="10.5" fill="#9088ad">256-dim memory + query vectors</text>
+    <text x="904" y="740" font-size="10.5" fill="#9088ad">semantic recall · dedupe · clustering</text>
+
+    <text x="884" y="792" font-size="10" fill="#7a7295">qwen_client.py — every call, one file (proof of use)</text>
+  </g>
+
+  <!-- flows -->
+  <path d="M173 300 L173 360" stroke="#8b5cf6" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="185" y="335" font-size="10" fill="#9088ad">HTTPS</text>
+
+  <path d="M298 425 L420 425" stroke="#8b5cf6" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="318" y="415" font-size="10" fill="#9088ad">proxy /api → :8788</text>
+
+  <path d="M570 520 L570 580" stroke="#ff2d78" stroke-width="1.6" marker-end="url(#arrp)"/>
+  <text x="582" y="556" font-size="10" fill="#9088ad">recall · remember · sleep</text>
+
+  <path d="M298 655 C 360 655 380 690 420 690" stroke="#22d3ee" stroke-width="1.6" fill="none" marker-end="url(#arrc)"/>
+  <text x="318" y="645" font-size="10" fill="#9088ad">same engine, same store</text>
+
+  <path d="M720 425 L860 425" stroke="url(#hdr)" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="740" y="415" font-size="10" fill="#9088ad">chat/completions (SSE)</text>
+
+  <path d="M720 690 C 800 690 800 590 860 590" stroke="url(#hdr)" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+  <text x="742" y="640" font-size="10" fill="#9088ad">extract · arbitrate</text>
+  <path d="M720 730 C 810 730 810 710 860 710" stroke="url(#hdr)" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+  <text x="742" y="752" font-size="10" fill="#9088ad">embeddings</text>
+
+  <!-- pipeline strip -->
+  <g font-size="11">
+    <rect x="48" y="118" width="1184" height="0" fill="none"/>
+    <text x="875" y="182" font-size="13" fill="#ffffff" font-weight="bold" letter-spacing="2">CHAT TURN PIPELINE</text>
+    <g transform="translate(875,200)">
+      <rect x="0" y="0" width="76" height="30" rx="8" fill="#1a1132" stroke="#ffd166" stroke-opacity=".6"/>
+      <text x="14" y="19" fill="#ffd166">RECALL</text>
+      <rect x="94" y="0" width="80" height="30" rx="8" fill="#1a1132" stroke="#ff2d78" stroke-opacity=".6"/>
+      <text x="108" y="19" fill="#ff8ab5">REASON</text>
+      <rect x="192" y="0" width="96 " height="30" rx="8" fill="#1a1132" stroke="#22d3ee" stroke-opacity=".6"/>
+      <text x="206" y="19" fill="#7ef2ff">MEMORIZE</text>
+      <path d="M76 15 L94 15" stroke="#8b5cf6" marker-end="url(#arr)"/>
+      <path d="M174 15 L192 15" stroke="#8b5cf6" marker-end="url(#arr)"/>
+      <text x="0" y="52" fill="#9088ad" font-size="10">score components streamed to UI — every recall is explainable</text>
+    </g>
+  </g>
+</svg>
