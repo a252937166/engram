@@ -232,7 +232,7 @@ def main():
     })
 
     # ------------------------------------------------------------- report
-    print("\n## Results (measured %s)\n" % time.strftime("%Y-%m-%d"))
+    print("\n## Results (measured %s UTC / %s local)\n" % (time.strftime("%Y-%m-%d %H:%M", time.gmtime()), time.strftime("%Y-%m-%d %H:%M")))
     print("| Scenario | no-memory baseline | full-history baseline | ENGRAM | pass |")
     print("|---|---|---|---|---|")
     for r in rows:

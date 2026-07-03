@@ -19,7 +19,7 @@ responses — nothing is estimated. The suite seeds a fresh user, teaches four
 facts, then buries them under **13 turns of unrelated small talk** before
 testing.
 
-## Results (measured 2026-07-04)
+## Results (measured 2026-07-04 UTC+8 / 2026-07-03 PDT)
 
 | Scenario | no-memory baseline | full-history baseline | ENGRAM | pass |
 |---|---|---|---|---|

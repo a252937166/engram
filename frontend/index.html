@@ -413,7 +413,8 @@ function resize(){
 }
 addEventListener('resize', resize); resize();
 
-const stars = Array.from({length:130},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.1+.2,p:Math.random()*6.28,s:.5+Math.random()}));
+const stars = Array.from({length:240},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.2+.2,p:Math.random()*6.28,s:.5+Math.random(),l:Math.random()<.35?2:1}));
+let meteor = null, meteorT = 6000;
 const nodes = new Map();   // id -> node
 let links = [];
 const fx = [];             // transient effects
@@ -421,8 +422,8 @@ let sparkT = 0;
 
 function nodeRadius(n){ return 3.5 + n.importance*4.5 + Math.min(n.strength,5)*0.9; }
 function orbitFor(n,i){
-  const maxR = Math.min(W*0.30, H*0.40);
-  const r = 105 + (1 - Math.min(n.retention??.5,1)) * (maxR-105) * 0.9 + (i%5)*7;
+  const maxR = Math.min(W*0.335, H*0.44);
+  const r = 198 + (1 - Math.min(n.retention??.5,1)) * (maxR-198) * 0.9 + (i%5)*9;
   return Math.min(r, maxR);
 }
 function hashAngle(id){ let h=0; for(const c of id) h=(h*31+c.charCodeAt(0))>>>0; return (h%6283)/1000; }
@@ -478,13 +479,50 @@ function draw(ts){
   const g2 = ctx.createRadialGradient(CX+W*.2,CY+120,0,CX+W*.2,CY+120,W*.38);
   g2.addColorStop(0,'rgba(255,45,120,.05)'); g2.addColorStop(1,'transparent');
   ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
-  // stars
+  // stars (two parallax layers)
   for (const s of stars){
     const tw = .35+.65*Math.abs(Math.sin(ts*.0005*s.s+s.p));
-    ctx.globalAlpha = tw*.6; ctx.fillStyle='#cbd5ff';
-    ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, 7); ctx.fill();
+    const drift = s.l===2 ? (ts*.0000045)%1 : (ts*.0000018)%1;
+    ctx.globalAlpha = tw*(s.l===2?.75:.45); ctx.fillStyle = s.l===2?'#dfe6ff':'#8f9bd8';
+    ctx.beginPath(); ctx.arc(((s.x+drift)%1)*W, s.y*H, s.r*(s.l===2?1.15:1), 0, 7); ctx.fill();
   }
   ctx.globalAlpha=1;
+  // occasional meteor
+  meteorT -= 16;
+  if (meteorT<=0 && !meteor){
+    const y0 = H*(0.08+Math.random()*0.5);
+    meteor = {x:-60, y:y0, vx:14+Math.random()*8, vy:3.5+Math.random()*2.5, life:0};
+    meteorT = 9000+Math.random()*12000;
+  }
+  if (meteor){
+    meteor.x += meteor.vx; meteor.y += meteor.vy; meteor.life += 16;
+    const gm = ctx.createLinearGradient(meteor.x, meteor.y, meteor.x-90, meteor.y-24);
+    gm.addColorStop(0,'rgba(230,235,255,.85)'); gm.addColorStop(1,'transparent');
+    ctx.strokeStyle=gm; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(meteor.x,meteor.y); ctx.lineTo(meteor.x-90,meteor.y-24); ctx.stroke();
+    if (meteor.x>W+120 || meteor.y>H+60) meteor=null;
+  }
+  // polar radar grid (very faint instrument backdrop)
+  ctx.save(); ctx.translate(CX,CY);
+  ctx.strokeStyle='rgba(139,92,246,.055)'; ctx.lineWidth=1;
+  for (const R of [120,205,290,375]){
+    ctx.beginPath(); ctx.ellipse(0,0,R,R*.62,0,0,7); ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(139,92,246,.035)';
+  for (let k=0;k<12;k++){
+    const a=k*Math.PI/6;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a)*70,Math.sin(a)*70*.62);
+    ctx.lineTo(Math.cos(a)*385,Math.sin(a)*385*.62); ctx.stroke();
+  }
+  // sweeping radar beam
+  const sw = (ts*.00035)%(Math.PI*2);
+  const swg = ctx.createConicGradient ? null : null;
+  ctx.globalAlpha=.10;
+  ctx.fillStyle='rgba(139,92,246,.5)';
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.ellipse(0,0,375,375*.62,0,sw,sw+.5); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.restore();
 
   // orbit rings
   ctx.save(); ctx.translate(CX,CY);
@@ -496,6 +534,29 @@ function draw(ts){
     ctx.beginPath(); ctx.ellipse(0,0, 150+i*95, (150+i*95)*.44, i*.7, 0, 7); ctx.stroke();
     ctx.restore();
   }
+  ctx.restore();
+
+  // core HUD: data arcs + readout
+  const hud = window.__coreStats || {mem:0, reinf:0, saved:null, ctx:0};
+  ctx.save(); ctx.translate(CX,CY);
+  const arc = (r0, frac, col, base) => {
+    ctx.strokeStyle = base; ctx.lineWidth = 2.4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(0,0,r0,-Math.PI/2,-Math.PI/2+Math.PI*2*.999); ctx.stroke();
+    ctx.strokeStyle = col; ctx.globalAlpha=.85;
+    ctx.beginPath(); ctx.arc(0,0,r0,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.max(.02,Math.min(frac,1))); ctx.stroke();
+    ctx.globalAlpha=1;
+  };
+  arc(104, Math.min(hud.mem/40,1), 'rgba(255,45,120,.75)', 'rgba(255,45,120,.10)');
+  arc(112, hud.saved==null?0:hud.saved/100, 'rgba(34,211,238,.8)', 'rgba(34,211,238,.08)');
+  arc(120, Math.min(hud.reinf/80,1), 'rgba(167,139,250,.7)', 'rgba(167,139,250,.08)');
+  ctx.font='600 9px "JetBrains Mono", monospace'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(144,136,173,.9)';
+  ctx.fillText('N E U R A L   C O R E', 0, 146);
+  ctx.font='500 10.5px "JetBrains Mono", monospace';
+  ctx.fillStyle='rgba(233,228,247,.85)';
+  const savedTxt = hud.saved==null ? (hud.ctx+' tk context') : hud.saved.toFixed(0)+'% saved';
+  ctx.fillText(hud.mem+' engrams \u00b7 '+hud.reinf+' reinforced \u00b7 '+savedTxt, 0, 162);
+  ctx.textAlign='left';
   ctx.restore();
 
   // core
@@ -562,7 +623,7 @@ function draw(ts){
     const l = links[Math.floor(Math.random()*links.length)];
     if (nodes.get(l.a)?.status==='active' && nodes.get(l.b)?.status==='active')
       fx.push({k:'spark', a:l.a, b:l.b, t:0});
-    sparkT = 900+Math.random()*1400;
+    sparkT = 450+Math.random()*800;
   }
 
   // nodes
@@ -581,6 +642,20 @@ function draw(ts){
     if (n.status!=='active'){
       ctx.strokeStyle='rgba(200,200,220,.5)'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(n.x-r-2,n.y); ctx.lineTo(n.x+r+2,n.y); ctx.stroke();
+    }
+    // star-label: memory snippet floats beside its node
+    if (n.status==='active' && nodes.size<=70 && n.scale>0.6){
+      const snip = n.content.length>26 ? n.content.slice(0,25)+'\u2026' : n.content;
+      ctx.font='500 9px "JetBrains Mono", monospace';
+      const tw2 = ctx.measureText(snip).width;
+      const left = n.x > W-320;
+      const lx = left ? n.x-r-8-tw2 : n.x+r+8;
+      ctx.globalAlpha = (0.34+0.4*n.glow)*Math.max(n.scale,.1);
+      ctx.fillStyle = '#cfc6ea';
+      ctx.fillText(snip, lx, n.y+3);
+      ctx.globalAlpha = Math.max(.18*Math.max(n.scale,.1), .05);
+      ctx.strokeStyle = col; ctx.lineWidth = .7;
+      ctx.beginPath(); ctx.moveTo(left?n.x-r-4:n.x+r+4, n.y); ctx.lineTo(left?lx+tw2+2:lx-3, n.y); ctx.stroke();
     }
     ctx.globalAlpha=1;
   }
@@ -768,6 +843,7 @@ function renderStats(s, g){
   $('#tHist').innerHTML = fmt(s.full_history_tokens||0)+' <span>tk</span>';
   const saved = s.full_history_tokens>40 ? Math.max(0,(1 - Math.min(s.memory_store_tokens, s.full_history_tokens)/s.full_history_tokens)*100) : null;
   $('#hSaved').innerHTML = saved===null?'<em>—</em>':'<em>'+saved.toFixed(0)+'%</em>';
+  window.__coreStats = {mem: active, reinf: s.reinforcements||0, saved: saved, ctx: s.memory_store_tokens||0};
   const list = $('#memList');
   const act = g.nodes.filter(n=>n.status==='active').sort((a,b)=>b.retention-a.retention);
   if (!act.length){ list.innerHTML='<div class="empty">// empty — teach me something</div>'; return; }
