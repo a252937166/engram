@@ -526,6 +526,42 @@ class MemoryEngine(object):
             "merged": [{"id": m["id"], "content": m["content"]} for m in group],
         }
 
+    def has_memories(self, user_id):
+        rows = self._rows(
+            "SELECT COUNT(*) AS n FROM memories WHERE user_id=?", (user_id,)
+        )
+        return rows[0]["n"] > 0
+
+    def clone_seed(self, user_id, seed_uid):
+        """Copy the seed user's memory graph into a fresh user.
+
+        First-time visitors land on a living constellation (with its
+        supersede/consolidation audit trail) instead of an empty page,
+        and still get their own isolated space to play in.
+        """
+        if not seed_uid or user_id == seed_uid:
+            return 0
+        rows = self._rows("SELECT * FROM memories WHERE user_id=?", (seed_uid,))
+        if not rows:
+            return 0
+        idmap = {m["id"]: _uuid() for m in rows}
+        with self._lock:
+            for m in rows:
+                self._db.execute(
+                    "INSERT INTO memories(id, user_id, type, content, embedding, "
+                    "importance, strength, created_at, last_accessed, access_count, "
+                    "status, source_session, superseded_by, consolidated_into) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (idmap[m["id"]], user_id, m["type"], m["content"],
+                     m["embedding"], m["importance"], m["strength"],
+                     m["created_at"], m["last_accessed"], m["access_count"],
+                     m["status"], "seed",
+                     idmap.get(m["superseded_by"]),
+                     idmap.get(m["consolidated_into"])),
+                )
+            self._db.commit()
+        return len(rows)
+
     def forget(self, user_id, memory_id):
         self._exec(
             "UPDATE memories SET status='forgotten' "
