@@ -16,7 +16,7 @@ safe. Tell it you changed jobs — the old belief is *superseded*, not
 duplicated. Press **Sleep Cycle** — scattered episodic fragments consolidate
 into dense semantic knowledge, and stale traces are forgotten.
 
-![architecture](docs/architecture.svg)
+![architecture](docs/architecture.png)
 
 ## Why this is not "just RAG"
 
