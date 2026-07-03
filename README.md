@@ -2,7 +2,7 @@
 
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
-> **Live on Alibaba Cloud ECS (Beijing):** https://www.hackthon.site (also http://47.93.234.51) · **Mirror:** https://engram.axiqo.xyz · **Demo video:** see Devpost submission
+> **Live on Alibaba Cloud ECS (Beijing):** https://engram.hackthon.site (or http://47.93.234.51:8080) · **Mirror:** https://engram.axiqo.xyz · **Demo video:** see Devpost submission
 
 LLM agents wake up with amnesia every session. ENGRAM gives a Qwen agent a
 **persistent, self-organizing long-term memory** modeled on how biological
@@ -50,7 +50,8 @@ user turn ─▶ EXTRACT (qwen3.6-flash, typed JSON)
 ## Built on Qwen Cloud (Alibaba Cloud)
 
 All model calls go through **[`backend/qwen_client.py`](backend/qwen_client.py)**
-— this file is the proof of Alibaba Cloud usage — against the Qwen Cloud
+— this file is the proof of Alibaba Cloud usage (also served read-only from
+the production ECS at http://47.93.234.51:8080/qwen_client.py) — against the Qwen Cloud
 Model Studio international endpoint:
 
 ```
@@ -64,7 +65,7 @@ https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 | `text-embedding-v4` | 256-dim vectors for recall, dedupe and clustering |
 
 The full stack (nginx + systemd + SQLite + backend) is deployed on an
-**Alibaba Cloud ECS instance (Beijing)** — live at https://www.hackthon.site / http://47.93.234.51 —
+**Alibaba Cloud ECS instance (Beijing)** — live at https://engram.hackthon.site / http://47.93.234.51:8080 —
 with an HTTPS mirror at https://engram.axiqo.xyz. All model inference
 (reasoning, extraction, arbitration, embeddings) runs on Qwen Cloud, so both
 the hosting and the AI backbone are Alibaba Cloud.
