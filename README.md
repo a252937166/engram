@@ -2,7 +2,7 @@
 
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
-> **Live (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **HTTPS mirror:** https://engram.axiqo.xyz · **Demo video (3 min, narrated):** https://youtu.be/sPk6KS2gFME
+> **Live (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **HTTPS mirror:** https://engram.axiqo.xyz · **Demo video (3 min, narrated):** https://youtu.be/xZvDm35cXos
 >
 > ECS instance `i-2zefhmpp3htrijv7plwr` (cn-beijing-c). Domain https://engram.hackthon.site attaches pending ICP filing — use the IP or mirror if it times out from your region.
 
