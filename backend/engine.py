@@ -42,7 +42,9 @@ SEMANTIC_FLOOR = 0.25       # below this similarity a memory is never recalled
 CRITICAL_FLOOR = 0.15       # ...unless it is safety-critical (importance>=.85)
 DUPLICATE_SIM = 0.90        # >= : same fact, reinforce instead of insert
 CONFLICT_SIM = 0.45         # >= : related enough to consult the arbiter model
-CLUSTER_SIM = 0.80          # >= : sleep-cycle consolidation clustering
+CLUSTER_SIM = 0.58          # >= : sleep-cycle consolidation clustering
+                            # (256-d qwen-v4 space: same-topic pairs measure
+                            #  ~0.50-0.75, unrelated facts < ~0.48)
 RETENTION_FLOOR = 0.28      # below this a mature memory is forgotten
 RETENTION_GRACE_DAYS = 7.0  # young memories are safe from forgetting
 MAX_MEMORIES_PER_USER = 400
@@ -452,33 +454,40 @@ class MemoryEngine(object):
                     {"id": m["id"], "content": m["content"]}
                 )
 
-        mems = [m for m in self._active(user_id) if m["vec"] is not None]
-        parent = list(range(len(mems)))
+        # Cluster within each memory type: a diet preference must not be
+        # vacuumed into an episodic travel plan just because both mention food.
+        by_type = {}
+        for m in self._active(user_id):
+            if m["vec"] is not None:
+                by_type.setdefault(m["type"], []).append(m)
 
-        def find(i):
-            while parent[i] != i:
-                parent[i] = parent[parent[i]]
-                i = parent[i]
-            return i
+        for mtype, mems in by_type.items():
+            parent = list(range(len(mems)))
 
-        for i in range(len(mems)):
-            for j in range(i + 1, len(mems)):
-                if _cosine(mems[i]["vec"], mems[j]["vec"]) >= CLUSTER_SIM:
-                    parent[find(i)] = find(j)
+            def find(i):
+                while parent[i] != i:
+                    parent[i] = parent[parent[i]]
+                    i = parent[i]
+                return i
 
-        clusters = {}
-        for i in range(len(mems)):
-            clusters.setdefault(find(i), []).append(mems[i])
+            for i in range(len(mems)):
+                for j in range(i + 1, len(mems)):
+                    if _cosine(mems[i]["vec"], mems[j]["vec"]) >= CLUSTER_SIM:
+                        parent[find(i)] = find(j)
 
-        for group in clusters.values():
-            if len(group) < 3:
-                continue
-            merged = self._merge_cluster(user_id, group)
-            if merged:
-                report["consolidated"].append(merged)
+            clusters = {}
+            for i in range(len(mems)):
+                clusters.setdefault(find(i), []).append(mems[i])
+
+            for group in clusters.values():
+                if len(group) < 3:
+                    continue
+                merged = self._merge_cluster(user_id, group, mtype)
+                if merged:
+                    report["consolidated"].append(merged)
         return report
 
-    def _merge_cluster(self, user_id, group):
+    def _merge_cluster(self, user_id, group, mtype="semantic"):
         items = "\n".join("- " + m["content"] for m in group)
         try:
             text, _ = qwen_client.chat(
@@ -502,7 +511,7 @@ class MemoryEngine(object):
             "INSERT INTO memories(id, user_id, type, content, embedding, "
             "importance, strength, created_at, last_accessed, source_session) "
             "VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (new_id, user_id, "semantic", summary, _pack(vec), importance,
+            (new_id, user_id, mtype, summary, _pack(vec), importance,
              strength, now, now, "sleep-cycle"),
         )
         for m in group:
