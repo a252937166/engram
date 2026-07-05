@@ -46,6 +46,29 @@ Key deltas:
   Track 1 "recall critical memories in a limited window" requirement,
   demonstrated with a measured number.
 
+## Ablations (measured 2026-07-05, real API)
+
+Each mechanism switched off individually via `ENGRAM_ABLATION`, then the
+scenario that stresses it re-run on a fresh DB — same models, same facts,
+only the mechanism differs.
+
+| Variant | S5: peanut allergy vs "trail snack" query | S2: "moved from Acme to Nova" |
+|---|---|---|
+| **full engine** (control) | **RECALLED** at cosine **0.246** — importance-rescue floor admits it | op=`updated` · stale employer recalled **0×** · active employer facts **1** |
+| `semantic_only` — score = cosine, no rescue floor (≈ plain vector RAG scoring) | **MISSED** — the life-critical fact silently drops out | — |
+| `no_arbiter` — store without LLM belief revision (≈ append-only RAG store) | — | op=`created` · stale "works at Acme" recalled **1×** · active employer facts **2** (contradiction served to the model) |
+| `no_sleep` — no consolidation | related fragments never merge; the store only grows (with sleep on, S4 measures 3 fragments → 1 and 98 → 74 store tokens) | — |
+
+Read: a plain vector-RAG memory (≈ `semantic_only` + `no_arbiter`) fails
+both — it misses the allergy *and* serves two contradictory employer facts.
+Each mechanism earns its place with a reproducible failure when removed:
+
+```bash
+python3 eval/run_ablation.py full
+python3 eval/run_ablation.py semantic_only   # S5 flips to MISSED
+python3 eval/run_ablation.py no_arbiter      # S2 keeps the stale fact alive
+```
+
 ## Reproduce
 
 ```bash

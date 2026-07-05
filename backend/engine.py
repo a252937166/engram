@@ -38,6 +38,13 @@ HALF_LIFE_DAYS = {
     "episodic": 21.0,
 }
 WEIGHTS = {"semantic": 0.55, "recency": 0.18, "importance": 0.17, "usage": 0.10}
+
+# Ablation switch for the evaluation suite (docs/evaluation.md):
+#   ENGRAM_ABLATION=semantic_only  cosine-only scoring, no rescue floor
+#   ENGRAM_ABLATION=no_arbiter     skip LLM arbitration (threshold-only memory)
+#   ENGRAM_ABLATION=no_sleep       sleep_cycle becomes a no-op
+import os as _os
+ABLATION = _os.environ.get("ENGRAM_ABLATION", "")
 SEMANTIC_FLOOR = 0.25       # below this similarity a memory is never recalled
 CRITICAL_FLOOR = 0.15       # ...unless it is safety-critical (importance>=.85)
 DUPLICATE_SIM = 0.90        # >= : same fact, reinforce instead of insert
@@ -229,7 +236,10 @@ class MemoryEngine(object):
             if m["vec"] is None:
                 continue
             sim = _cosine(qvec, m["vec"])
-            floor = CRITICAL_FLOOR if m["importance"] >= 0.85 else SEMANTIC_FLOOR
+            if ABLATION == "semantic_only":
+                floor = SEMANTIC_FLOOR          # no safety rescue floor
+            else:
+                floor = CRITICAL_FLOOR if m["importance"] >= 0.85 else SEMANTIC_FLOOR
             if sim < floor:
                 continue
             age_days = (now - (m["last_accessed"] or m["created_at"])) / DAY
@@ -242,7 +252,10 @@ class MemoryEngine(object):
                 "importance": round(m["importance"], 4),
                 "usage": round(usage, 4),
             }
-            score = sum(WEIGHTS[k] * comp[k] for k in WEIGHTS)
+            if ABLATION == "semantic_only":
+                score = comp["semantic"]
+            else:
+                score = sum(WEIGHTS[k] * comp[k] for k in WEIGHTS)
             scored.append((score, comp, m))
         scored.sort(key=lambda t: -t[0])
 
@@ -331,7 +344,7 @@ class MemoryEngine(object):
         # Semantically nearby memories: embeddings cannot tell "update" from
         # "compatible fact" (a diet and an allergy sit as close as a diet and
         # its reversal), so the arbiter model decides.
-        if neighbors:
+        if neighbors and ABLATION != "no_arbiter":
             verdict = self._arbitrate(content, [m for _s, m in neighbors[:4]])
             dup = verdict.get("duplicate_of")
             if dup is not None:
@@ -443,6 +456,8 @@ class MemoryEngine(object):
         """
         now = _now()
         report = {"forgotten": [], "consolidated": []}
+        if ABLATION == "no_sleep":
+            return report
 
         for m in self._active(user_id, with_vectors=False):
             age = (now - m["created_at"]) / DAY
