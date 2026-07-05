@@ -37,6 +37,10 @@ DB_PATH = os.environ.get("ENGRAM_DB", os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "engram.db"))
 DAILY_CHAT_LIMIT = int(os.environ.get("ENGRAM_DAILY_LIMIT", "400"))
 SEED_USER = os.environ.get("ENGRAM_SEED_USER", "")
+SEED_USERS = {
+    "default": SEED_USER,
+    "devops": os.environ.get("ENGRAM_SEED_DEVOPS", "seed-devops-2026"),
+}
 FRONTEND_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
 
@@ -145,8 +149,10 @@ class Handler(BaseHTTPRequestHandler):
             if route == "/api/bootstrap":
                 if not USER_RE.match(user_id):
                     return self._json(400, {"error": "bad user_id"})
-                if SEED_USER and not ENGINE.has_memories(user_id):
-                    ENGINE.clone_seed(user_id, SEED_USER)
+                seed_uid = SEED_USERS.get(query.get("seed", "default")) \
+                    or SEED_USER
+                if seed_uid and not ENGINE.has_memories(user_id):
+                    ENGINE.clone_seed(user_id, seed_uid)
                 return self._json(200, {
                     "sessions": ENGINE.list_sessions(user_id),
                     "graph": ENGINE.memory_graph(user_id),

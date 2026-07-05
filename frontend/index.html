@@ -390,8 +390,10 @@ function md(t){
 const fmt = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 
 /* ============================================================== state === */
-let userId = localStorage.getItem('engram_uid');
-if (!userId){ userId = 'u-'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-6); localStorage.setItem('engram_uid', userId); }
+const SEED = new URLSearchParams(location.search).get('seed') || '';
+const UID_KEY = SEED ? 'engram_uid_'+SEED : 'engram_uid';
+let userId = localStorage.getItem(UID_KEY);
+if (!userId){ userId = 'u-'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-6); localStorage.setItem(UID_KEY, userId); }
 let sessionId = null, busy = false, recallsNow = 0;
 $('#uid').textContent = 'ID:'+userId.slice(0,12);
 
@@ -876,7 +878,7 @@ async function refresh(){
 
 /* ============================================================= sessions === */
 async function loadSessions(){
-  const b = await api('/bootstrap?user_id='+userId);
+  const b = await api('/bootstrap?user_id='+userId+(SEED?'&seed='+encodeURIComponent(SEED):''));
   setGraph(b.graph); renderStats(b.stats, b.graph);
   $('#quotaR').textContent = 'DEMO QUOTA '+b.daily_used+'/'+b.daily_limit;
   const sel = $('#sessSel');
@@ -950,7 +952,7 @@ $('#send').addEventListener('click', ()=>send(input.value));
 document.querySelectorAll('.sg').forEach(el=>el.addEventListener('click', ()=>send(el.dataset.m)));
 $('#reset').addEventListener('click', ev=>{
   ev.preventDefault();
-  localStorage.removeItem('engram_uid');
+  localStorage.removeItem(UID_KEY);
   location.reload();
 });
 
