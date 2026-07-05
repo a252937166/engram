@@ -34,9 +34,71 @@ EMBED_DIM = int(os.environ.get("ENGRAM_EMBED_DIM", "256"))
 
 _SSL_CTX = ssl.create_default_context()
 
+# Offline smoke mode: ENGRAM_FAKE_QWEN=1 swaps every Qwen call for a
+# deterministic local stand-in so judges can exercise the full pipeline
+# (extract -> embed -> arbitrate -> recall -> sleep) without an API key.
+# It validates plumbing, not model quality - the real eval always runs
+# against Qwen Cloud.
+FAKE = os.environ.get("ENGRAM_FAKE_QWEN") == "1"
+
 
 class QwenError(Exception):
     """Raised when Qwen Cloud returns an unrecoverable error."""
+
+
+# ------------------------------------------------------------- fake mode ---
+def _fake_embed_one(text):
+    """Stable character-trigram hash embedding (crc32, no random salt)."""
+    import zlib
+    import math
+    vec = [0.0] * EMBED_DIM
+    t = " " + text.lower() + " "
+    for i in range(len(t) - 2):
+        vec[zlib.crc32(t[i:i + 3].encode("utf-8")) % EMBED_DIM] += 1.0
+    norm = math.sqrt(sum(x * x for x in vec)) or 1.0
+    return [x / norm for x in vec]
+
+
+def _fake_extract(user_text):
+    """Keyword-rule memory extraction covering the demo/eval vocabulary."""
+    t = user_text.lower()
+    out = []
+
+    def add(mtype, content, imp):
+        out.append({"type": mtype, "content": content, "importance": imp})
+    if "allergic" in t or "allergy" in t:
+        add("preference", "User has a severe allergy mentioned in conversation.", 0.95)
+    if "vegetarian" in t:
+        add("preference", "User is vegetarian.", 0.7)
+    if "i'm " in t and " work " in t:
+        add("semantic", "User described their job: " + user_text[:120], 0.7)
+    if "never" in t or "always" in t or "don't" in t:
+        add("procedural", "Standing instruction: " + user_text[:120], 0.8)
+    if "planning" in t or "trip" in t:
+        add("episodic", "User plan: " + user_text[:120], 0.5)
+    if "now" in t and ("left" in t or "moved" in t or "changed" in t):
+        add("semantic", "Update: " + user_text[:120], 0.8)
+    return out[:4]
+
+
+def _fake_arbitrate(prompt_text):
+    """Heuristic duplicate/replaces/distinct verdict from the arbiter prompt."""
+    seg = prompt_text.split("NEW:", 1)[-1]
+    new = seg.split("EXISTING", 1)[0].strip().lower()
+    listing = prompt_text.split("EXISTING related memories:", 1)[-1]
+    first = ""
+    for line in listing.splitlines():
+        line = line.strip()
+        if line[:2] in ("1.",):
+            first = line[2:].strip().lower()
+            break
+    nw, fw = set(new.split()), set(first.split())
+    overlap = len(nw & fw) / max(1, len(nw | fw))
+    if overlap > 0.8:
+        return {"duplicate_of": 1, "replaces": []}
+    if any(w in new for w in ("now", "left", "moved", "no longer", "update")):
+        return {"duplicate_of": None, "replaces": [1]}
+    return {"duplicate_of": None, "replaces": []}
 
 
 def _request(path, payload, timeout=90):
@@ -76,6 +138,13 @@ def _request(path, payload, timeout=90):
 def chat(messages, model=None, temperature=0.7, max_tokens=1200,
          enable_thinking=False, timeout=90):
     """Non-streaming chat completion. Returns (text, usage_dict)."""
+    if FAKE:
+        user = next((m["content"] for m in reversed(messages)
+                     if m["role"] == "user"), "")
+        if "duplicate_of" in user or "EXISTING related memories" in user:
+            import json as _j
+            return _j.dumps(_fake_arbitrate(user)), {"total_tokens": 0}
+        return ("[offline fake-qwen] Acknowledged: " + user[:80]), {"total_tokens": 0}
     resp = _request(
         "/chat/completions",
         {
@@ -98,6 +167,13 @@ def chat_stream(messages, model=None, temperature=0.7, max_tokens=1200,
 
     Yields ("delta", text) chunks and finally ("usage", usage_dict).
     """
+    if FAKE:
+        user = next((m["content"] for m in reversed(messages)
+                     if m["role"] == "user"), "")
+        for word in ("[offline fake-qwen] Acknowledged: " + user[:80]).split():
+            yield ("delta", word + " ")
+        yield ("usage", {"total_tokens": 0, "prompt_tokens": 0})
+        return
     resp = _request(
         "/chat/completions",
         {
@@ -136,6 +212,12 @@ def chat_stream(messages, model=None, temperature=0.7, max_tokens=1200,
 
 def extract_json(messages, model=None, max_tokens=700):
     """Ask the fast model for a JSON-only answer and parse it defensively."""
+    if FAKE:
+        prompt = " ".join(m["content"] for m in messages)
+        if "duplicate_of" in prompt:
+            return _fake_arbitrate(prompt)
+        user = messages[-1]["content"] if messages else ""
+        return _fake_extract(user)
     text, _usage = chat(
         messages,
         model=model or FAST_MODEL,
@@ -166,6 +248,8 @@ def embed(texts, dimensions=None):
     """Embed a list of strings. Returns list of float vectors."""
     if not texts:
         return []
+    if FAKE:
+        return [_fake_embed_one(t) for t in texts]
     vectors = []
     # text-embedding-v4 accepts up to 10 inputs per call
     for i in range(0, len(texts), 10):

@@ -1,0 +1,18 @@
+name: ci
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"   # oldest easily available; code targets 3.6 stdlib
+      - name: Compile all sources
+        run: python3 -m py_compile backend/*.py eval/*.py tests/*.py
+      - name: Offline pipeline smoke (no API key needed)
+        run: ENGRAM_FAKE_QWEN=1 python3 tests/smoke_offline.py
