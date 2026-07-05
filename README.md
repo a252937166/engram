@@ -10,7 +10,7 @@ zero stale-fact leakage.
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
 > **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
-> **Origin (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **Demo video (3 min, narrated):** https://youtu.be/yfjW6hGBj9s
+> **Origin (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
 >
 > Judges: [**JUDGING.md**](JUDGING.md) is a 5-step verification path (10 s → 10 min) ·
 > [**docs/proof-of-deployment.md**](docs/proof-of-deployment.md) proves the Alibaba Cloud runtime (ECS `i-2zefhmpp3htrijv7plwr`, cn-beijing-c).
