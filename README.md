@@ -3,7 +3,8 @@
 **A memory that behaves like memory: it recalls under a fixed token budget,
 revises beliefs instead of piling up contradictions, consolidates while it
 "sleeps", and shows you every decision it makes.** Measured against
-baselines on the same Qwen model: 5/5 scenarios, up to 94% smaller context,
+baselines on the same Qwen model: 5/5 scenarios, 2.8× smaller prompts than
+full-history stuffing, a memory store 94% smaller than raw history, and
 zero stale-fact leakage.
 
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
