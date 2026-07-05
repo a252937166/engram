@@ -1,10 +1,19 @@
 # ENGRAM — a neural long-term memory engine for Qwen agents
 
+**A memory that behaves like memory: it recalls under a fixed token budget,
+revises beliefs instead of piling up contradictions, consolidates while it
+"sleeps", and shows you every decision it makes.** Measured against
+baselines on the same Qwen model: 5/5 scenarios, up to 94% smaller context,
+zero stale-fact leakage.
+
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
-> **Live (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **HTTPS mirror:** https://engram.axiqo.xyz · **Demo video (3 min, narrated):** https://youtu.be/xZvDm35cXos
+> **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
+> **Origin (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **Demo video (3 min, narrated):** https://youtu.be/xZvDm35cXos
 >
-> ECS instance `i-2zefhmpp3htrijv7plwr` (cn-beijing-c). Domain https://engram.hackthon.site attaches pending ICP filing — use the IP or mirror if it times out from your region.
+> Judges: [**JUDGING.md**](JUDGING.md) is a 5-step verification path (10 s → 10 min) ·
+> [**docs/proof-of-deployment.md**](docs/proof-of-deployment.md) proves the Alibaba Cloud runtime (ECS `i-2zefhmpp3htrijv7plwr`, cn-beijing-c).
+> Domain https://engram.hackthon.site attaches pending ICP filing.
 
 LLM agents wake up with amnesia every session. ENGRAM gives a Qwen agent a
 **persistent, self-organizing long-term memory** modeled on how biological
@@ -186,19 +195,52 @@ Tools: `engram_remember` · `engram_recall` · `engram_forget` ·
 | `POST /api/forget` | explicit right-to-be-forgotten for one memory |
 | `GET /api/bootstrap` · `/api/stats` · `/api/messages` · `POST /api/sessions` | app plumbing |
 
+## Privacy & data governance
+
+A memory engine holds durable personal facts, so governance is part of the
+design, not an afterthought:
+
+- **Per-user isolation** — every query is scoped by `user_id` at the SQL
+  layer; there is no cross-user retrieval path. Demo visitors get a random
+  anonymous id (no account, no tracking).
+- **Right to be forgotten** — `POST /api/forget` (and the ✕ on any node in
+  the UI) tombstones a memory immediately; it can never be retrieved again.
+  Forgetting is also *automatic*: low-retention traces decay out during
+  sleep cycles.
+- **Corrections don't linger** — superseded beliefs are structurally
+  excluded from retrieval, so an outdated address or diet cannot resurface.
+- **Auditability** — every memory carries its provenance (`superseded_by`,
+  `consolidated_into`, access counts, timestamps); the UI streams the exact
+  score components behind each recall. Nothing the engine does is invisible.
+- **Key & data custody** — the Qwen API key lives only in
+  `/etc/engram/engram.env` on the server (never in the repo or the
+  browser); memories live in a local SQLite file on the ECS, sent nowhere
+  except as retrieval context to Qwen Cloud for the user's own reply.
+- **Abuse control** — per-IP rate limits, daily demo quota, input-size
+  caps, per-user memory caps.
+
 ## Judging map
 
+- **Start here:** [JUDGING.md](JUDGING.md) — verify in 10 seconds (live
+  health), 30 seconds (offline smoke, no key), or 10 minutes (full
+  benchmark). Alibaba Cloud runtime proof:
+  [docs/proof-of-deployment.md](docs/proof-of-deployment.md).
 - **Technical depth** — hybrid scored retrieval with per-type decay,
   LLM-arbitrated belief revision, sleep-cycle consolidation, MCP server,
-  streaming pipeline; all on a 728 MB box with zero dependencies.
+  streaming pipeline; all on a 728 MB box with zero dependencies. Each
+  mechanism is justified by an ablation
+  ([docs/evaluation.md](docs/evaluation.md)).
 - **Innovation** — memory as a *first-class visualized citizen*: the
   constellation shows recall beams, reinforcement pulses, supersede flashes
   and consolidation vortexes in real time; every recall is explainable.
 - **Value** — cross-session personalization under a fixed token budget
   (context stays ~800 tokens while history grows unbounded); engine is
-  embeddable via MCP in any agent stack.
+  embeddable via MCP in any agent stack; the
+  [DevOps seed](https://engram.axiqo.xyz/?seed=devops) shows the same engine
+  as an ops-runbook memory (vertical, B2B).
 - **Docs** — this README + architecture diagram + reproducible evaluation
-  ([docs/evaluation.md](docs/evaluation.md)) + one-shot deploy script.
+  ([docs/evaluation.md](docs/evaluation.md)) + one-shot deploy script +
+  CI running the offline smoke on every push.
 
 ## License
 
