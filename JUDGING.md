@@ -23,7 +23,9 @@ ENGRAM_FAKE_QWEN=1 python3 tests/smoke_offline.py
 
 Deterministic fake Qwen client; exercises extract → embed → arbitrate →
 recall → forget → sleep → seed-clone with zero network. (Same check runs
-in GitHub Actions on every push.)
+in GitHub Actions on every push. Any warning shown on the Actions page is
+GitHub's Node-runtime deprecation notice for `actions/checkout` /
+`setup-python` — the ENGRAM smoke job itself passes.)
 
 ## 2. Run it yourself with a key (2 minutes)
 
