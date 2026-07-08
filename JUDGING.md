@@ -5,13 +5,13 @@ Five ways to verify ENGRAM, fastest first.
 ## 0. Live instance (10 seconds)
 
 ```bash
-curl http://47.93.234.51:8080/api/health   # Alibaba Cloud ECS, Beijing
+curl https://engram.hackthon.site/api/health   # Alibaba Cloud ECS, Beijing (direct IP: http://47.93.234.51:8080)
 ```
 
-Open http://47.93.234.51:8080 (HTTPS mirror: https://engram.axiqo.xyz) —
+Open https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz) —
 you land on a seeded constellation; chat, watch recalls/supersedes live,
 press **Sleep Cycle**. Try the DevOps scenario at
-http://47.93.234.51:8080/?seed=devops
+https://engram.hackthon.site/?seed=devops
 
 ## 1. Offline smoke — no API key needed (30 seconds)
 

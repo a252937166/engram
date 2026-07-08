@@ -10,11 +10,11 @@ zero stale-fact leakage.
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
 > **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
-> **Origin (Alibaba Cloud ECS, Beijing):** http://47.93.234.51:8080 · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
+> **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site (direct IP: http://47.93.234.51:8080) · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
 >
 > Judges: [**JUDGING.md**](JUDGING.md) is a 5-step verification path (10 s → 10 min) ·
 > [**docs/proof-of-deployment.md**](docs/proof-of-deployment.md) proves the Alibaba Cloud runtime (ECS `i-2zefhmpp3htrijv7plwr`, cn-beijing-c).
-> Domain https://engram.hackthon.site attaches pending ICP filing.
+> Domain https://engram.hackthon.site is live over HTTPS — ICP filing 蜀ICP备2026037600号-1 approved.
 
 LLM agents wake up with amnesia every session. ENGRAM gives a Qwen agent a
 **persistent, self-organizing long-term memory** modeled on how biological
@@ -120,7 +120,7 @@ user turn ─▶ EXTRACT (qwen3.6-flash, typed JSON)
 
 All model calls go through **[`backend/qwen_client.py`](backend/qwen_client.py)**
 — this file is the proof of Alibaba Cloud usage (also served read-only from
-the production ECS at http://47.93.234.51:8080/qwen_client.py) — against the Qwen Cloud
+the production ECS at https://engram.hackthon.site/qwen_client.py) — against the Qwen Cloud
 Model Studio international endpoint:
 
 ```
@@ -135,8 +135,8 @@ https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 
 The full stack (nginx + systemd + SQLite + backend) is deployed on
 **Alibaba Cloud ECS instance `i-2zefhmpp3htrijv7plwr` (cn-beijing-c)** —
-live at http://47.93.234.51:8080 — with an HTTPS mirror at
-https://engram.axiqo.xyz. All model inference (reasoning, extraction,
+live at https://engram.hackthon.site (direct IP http://47.93.234.51:8080) — with a
+global HTTPS mirror at https://engram.axiqo.xyz. All model inference (reasoning, extraction,
 arbitration, embeddings) runs on Qwen Cloud, so both the hosting and the AI
 backbone are Alibaba Cloud. Deployment proof video:
 https://youtu.be/DDso1eEqKTo
