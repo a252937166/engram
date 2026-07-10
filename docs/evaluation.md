@@ -74,7 +74,25 @@ python3 eval/run_ablation.py semantic_only   # S5 flips to MISSED
 python3 eval/run_ablation.py no_arbiter      # S2 keeps the stale fact alive
 ```
 
-## Re-run on the final submission commit (2026-07-10)
+## Final-freeze verification — exact SHA `7dc465f` (2026-07-10T16:37Z … 17:0xZ UTC)
+
+Everything below was re-executed on the frozen submission code
+(`7dc465f`, the commit the final release tags), real Qwen Cloud API
+unless marked deterministic:
+
+| Suite | Result |
+|---|---|
+| Benchmark, 5 Track-1 scenarios vs both baselines | **5/5** — 182 vs 453 tk prompt (S1) · zero stale recall (S2) · 48 tk store vs 1155 tk raw history (S3) · 3→1, 98→74 tk (S4) · rescue at semantic 0.31 (S5) |
+| Ablations | `full`: S5 RECALLED @0.246, S2 `updated`/0 stale/1 active · `semantic_only`: S5 **MISSED** · `no_arbiter`: S2 `created`, stale recalled 1×, 2 active contradictory facts |
+| Policy gate, 20 deterministic cases | **20/20** — deny precision 100% · deny recall 100% · false-block 0% · p95 0.2 ms |
+| Stability, 10× each | S2 belief revision **10/10** · S5 critical rescue **10/10** (semantic 0.25–0.31) |
+
+Environment: `qwen3.7-plus` / `qwen3.6-flash` / `text-embedding-v4` via
+`dashscope-intl.aliyuncs.com/compatible-mode/v1`; fresh SQLite per run;
+`ENGRAM_SEED_USER=` unset; policy suite runs the deterministic verdict
+path (no model in the loop).
+
+## Re-run on the final submission commit (2026-07-10, earlier hardening pass)
 
 Same suite, re-executed after the reliability hardening (code state
 `f83784d`: atomic revision/consolidation, deferred reinforcement, cluster
