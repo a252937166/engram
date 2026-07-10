@@ -178,6 +178,9 @@ main{flex:1;display:flex;min-height:0;padding:16px 18px 14px;gap:16px}
 }
 #send:hover{filter:brightness(1.2)}
 #send:disabled{filter:grayscale(.8);cursor:wait}
+#send.stop{background:rgba(255,93,115,.2);border:1px solid rgba(255,93,115,.6);color:#ff8ab5}
+#keyHint{color:#5f5680;font:600 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.06em}
+.mi-meta{margin-top:4px;font:600 9.5px/1.5 "JetBrains Mono",monospace;color:#6f6590;letter-spacing:.03em}
 #quota{margin-top:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--faint);display:flex;justify-content:space-between}
 
 /* center overlay (empty state) */
@@ -288,12 +291,9 @@ footer a:hover{color:#fff}
   background:rgba(24,10,40,.92);backdrop-filter:blur(8px);font:600 12px/1.4 "JetBrains Mono",monospace;
   color:#f3c9ff;max-width:92vw}
 #jdBar .stop{cursor:pointer;color:#8f86ab;border:1px solid #444;border-radius:8px;padding:3px 9px;background:none;font-size:11px}
-#njr{position:absolute;left:18px;top:14px;z-index:5;pointer-events:none;max-width:295px;
-  padding:12px 15px;border-radius:12px;border:1px solid rgba(167,139,250,.3);
-  background:rgba(16,8,30,.72);backdrop-filter:blur(4px)}
-#njr b{display:block;font-size:10.5px;letter-spacing:.16em;color:#c084fc;margin-bottom:7px}
-#njr span{display:block;font-size:11.5px;line-height:1.75;color:#b9aed6}
-@media (max-width:1180px){ #njr{display:none} }
+#njr{margin-top:14px;padding:12px 14px;border:1px solid rgba(139,92,246,.28);border-radius:10px;
+  font-size:11.5px;line-height:1.9;color:#b7abdd;display:flex;flex-direction:column}
+#njr b{font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.14em;color:#c4b5fd;margin-bottom:6px}
 .rc{cursor:pointer}
 .rc .rsc{margin-right:4px}
 .mi.skel{color:#6f6590;border-left-color:#4a3f66!important;font-style:italic}
@@ -445,6 +445,9 @@ body.mode-chat .app > #proofBar, body.mode-chat .app > #tabBar,
 body.mode-chat .app > main, body.mode-chat .app > #chatDock,
 body.mode-chat .app > #narrowNote{display:none !important}
 body.mode-lab #workspace{display:none}
+/* recording mode: keep the composer above the burned-subtitle band */
+body.rec-safe #workspace{bottom:170px}
+body.rec-safe.mode-lab .app{padding-bottom:150px}
 /* ============ conversation workbench (default mode) ============ */
 #workspace{position:fixed;left:0;right:0;bottom:24px;top:var(--header-h,64px);z-index:40;
   display:grid;background:transparent;
@@ -623,14 +626,6 @@ body.graph-open #workspace{background:transparent}
           <div class="sg" data-m="Update: I don't work at Acme anymore — I just joined Nova Robotics as head of infrastructure."><b>03 · EVOLVE</b>Change jobs. The old belief is superseded, not duplicated.</div>
         </div>
       </div>
-      <div id="njr">
-        <b>NOT JUST CHAT / RAG</b>
-        <span>✓ Qwen distills chat into durable memories</span>
-        <span>✓ Hybrid recall — semantic + recency + importance + usage</span>
-        <span>✓ Arbiter supersedes stale facts, no contradictions</span>
-        <span>✓ Sleep cycle consolidates &amp; forgets</span>
-        <span>✓ Every recall is scored — hover / click a recall chip</span>
-      </div>
       <div id="legend">
         <div class="lg" style="color:#ff2d78"><i style="background:#ff2d78"></i>preference</div>
         <div class="lg" style="color:#8b5cf6"><i style="background:#8b5cf6"></i>semantic</div>
@@ -694,7 +689,7 @@ body.graph-open #workspace{background:transparent}
           <textarea id="input" rows="1" placeholder="Talk to your agent — it remembers…"></textarea>
           <button id="send" title="Send">➤</button>
         </div>
-        <div id="quota"><span id="quotaL">MEMORY ENGINE READY</span><span id="quotaR"></span></div>
+        <div id="quota"><span id="quotaL">MEMORY ENGINE READY</span><span id="keyHint">↵ send · ⇧↵ newline</span><span id="quotaR"></span></div>
       </div>
     
     </div>
@@ -730,6 +725,14 @@ body.graph-open #workspace{background:transparent}
       <button class="btn primary" id="demoRun">▶ RUN THE JUDGE DEMO — 5 LIVE-VERIFIED CHECKS</button>
       <div id="demoVerdict"><div class="d-empty">// run the demo — the verdict is computed from the live store</div></div>
       <div id="demoTiles"></div>
+      <div id="njr">
+        <b>WHY THIS ISN'T PLAIN RAG</b>
+        <span>✓ Qwen distills chat into durable, typed memories</span>
+        <span>✓ Hybrid recall — semantic + recency + importance + usage</span>
+        <span>✓ Arbiter supersedes stale facts, no contradictions</span>
+        <span>✓ Sleep cycle consolidates &amp; forgets</span>
+        <span>✓ Every recall is scored and auditable per turn</span>
+      </div>
       <div id="mcpCard">MCP READY · 5 TOOLS<span>remember · recall · forget · sleep · stats — mount this store into any agent (backend/mcp_server.py)</span></div>
     </section>
   </div>
@@ -997,17 +1000,17 @@ function draw(ts){
 
   // links
   ctx.lineWidth=1;
+  // semantic-similarity links: quiet dotted gray (lifecycle edges carry color)
+  ctx.setLineDash([2,6]);
   for (const l of links){
     const a=nodes.get(l.a), b=nodes.get(l.b);
     if(!a||!b||a.status!=='active'||b.status!=='active') continue;
-    const gr = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
-    gr.addColorStop(0,(TYPE_COLOR[a.type]||'#888')+'33');
-    gr.addColorStop(1,(TYPE_COLOR[b.type]||'#888')+'33');
-    ctx.strokeStyle=gr; ctx.globalAlpha=.5+l.w*.3;
+    ctx.strokeStyle='rgba(150,145,175,.30)'; ctx.globalAlpha=.35+l.w*.3;
     ctx.beginPath(); ctx.moveTo(a.x,a.y);
     ctx.quadraticCurveTo((a.x+b.x)/2+(a.y-b.y)*.12,(a.y+b.y)/2+(b.x-a.x)*.12,b.x,b.y);
     ctx.stroke();
   }
+  ctx.setLineDash([]);
   ctx.globalAlpha=1;
 
   // lifecycle edges — persistent evidence of supersede / consolidate
@@ -1061,7 +1064,7 @@ function draw(ts){
     }
     // star-label: only nodes that matter right now get text - the current
     // turn's recalls/updates (glow), lifecycle ghosts, and the hovered node.
-    const hot = n.glow > 0.04 || n.status !== 'active' || n.hover;
+    const hot = n.glow > 0.04 || n.status !== 'active' || n.hover || n.pinned;
     if (hot && n.scale > 0.6){
       const snip = n.content.length>26 ? n.content.slice(0,25)+'\u2026' : n.content;
       ctx.font='500 9px "JetBrains Mono", monospace';
@@ -1143,6 +1146,14 @@ addEventListener('mousemove', ev=>{
   } else tip.style.display='none';
   for (const n of nodes.values()) n.hover = false;
   if (best) best.hover = true;
+});
+cv.addEventListener('click', ev=>{
+  let best=null, bd=26*26;
+  for (const n of nodes.values()){
+    const dx=ev.clientX-n.x, dy=ev.clientY-n.y, d=dx*dx+dy*dy;
+    if (d<bd){ bd=d; best=n; }
+  }
+  if (best){ best.pinned = !best.pinned; }
 });
 
 /* ================================================================ chat === */
@@ -1261,9 +1272,13 @@ function renderStore(){
   list.innerHTML = rows.map(n=>{
     const c = TYPE_COLOR[n.type]||'#999';
     const st = n.status!=='active' ? ' <i style="color:#8f86ab;font-style:normal">· '+n.status+'</i>' : '';
+    const when = n.created_at ? new Date(n.created_at*1000)
+      .toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
     return '<div class="mi" style="border-left-color:'+c+';opacity:'+(n.status==='active'?1:.6)+'">'
-      +'<div class="row"><span class="ty" style="color:'+c+'">'+n.type+' · ×'+(n.access_count||0)+st+'</span></div>'
+      +'<div class="row"><span class="ty" style="color:'+c+'">'+n.type+st+'</span></div>'
       + esc(n.content)
+      +'<div class="mi-meta">importance '+(n.importance??0).toFixed(2)
+      +' · created '+when+' · used '+(n.access_count||0)+'×</div>'
       +'<div class="bar"><i style="width:'+((n.retention??0)*100).toFixed(0)+'%;background:'+c+'"></i></div></div>';
   }).join('');
 }
@@ -1289,7 +1304,10 @@ function renderProofMini(){
 $('#demoRun').addEventListener('click', ()=>{ judgeDemo(); });
 
 document.addEventListener('keydown', ev=>{
-  if (ev.key==='Escape' && MODE==='lab') setMode('chat');
+  if (ev.key!=='Escape') return;
+  let hadPin = false;
+  for (const n of nodes.values()) if (n.pinned){ n.pinned=false; hadPin=true; }
+  if (!hadPin && MODE==='lab') setMode('chat');
 });
 
 function addUser(text){
@@ -1431,9 +1449,14 @@ function stageCard(id, html){
     $('#center').appendChild(el); }
   el.innerHTML = '<button class="sc-x" onclick="this.parentNode.remove()">✕</button>'+html;
 }
+let sendAbort = null;
 async function send(text){
-  if (busy || !text.trim()) return;
-  busy = true; $('#send').disabled = true;
+  if (busy){ return; }
+  if (!text.trim()) return;
+  busy = true;
+  sendAbort = new AbortController();
+  const sendBtn = $('#send');
+  sendBtn.textContent = '■'; sendBtn.title = 'Stop generating'; sendBtn.classList.add('stop');
   $('#hero').classList.add('gone');
   addUser(text); input.value=''; autosize();
   const bot = addBot();
@@ -1442,6 +1465,7 @@ async function send(text){
   try{
     const resp = await fetch(API+'/chat', {method:'POST',
       headers:{'Content-Type':'application/json'},
+      signal: sendAbort.signal,
       body: JSON.stringify({user_id:userId, session_id:sessionId, message:text})});
     if (!resp.ok){ throw new Error((await resp.json().catch(()=>({}))).error||('HTTP '+resp.status)); }
     const rd = resp.body.getReader(), dec = new TextDecoder();
@@ -1521,11 +1545,18 @@ async function send(text){
     }
     if (bubble.querySelector('.caret')) bubble.innerHTML = md(acc);
   } catch(err){
-    bubble.innerHTML = '⚠ '+esc(err.message);
-    bot.classList.add('err');
+    if (err.name === 'AbortError'){
+      bubble.innerHTML = md(acc) + ' <em style="color:#8f86ab">— stopped</em>';
+    } else {
+      bubble.innerHTML = '⚠ '+esc(err.message);
+      bot.classList.add('err');
+    }
   }
-  busy=false; $('#send').disabled=false; input.focus();
+  busy=false; sendAbort=null;
+  const sb=$('#send'); sb.textContent='➤'; sb.title='Send'; sb.classList.remove('stop');
+  input.focus();
 }
+$('#send').addEventListener('click', ()=>{ if (busy && sendAbort) sendAbort.abort(); });
 
 recallHandler: {
   log.addEventListener('click', ev=>{
@@ -1902,6 +1933,7 @@ $('#input').addEventListener('focus', ()=>$('#chatDock').classList.remove('min')
 /* boot mode: default conversation; ?mode=lab opens the lab; ?judge=1 runs the demo */
 {
   const q = new URLSearchParams(location.search);
+  if (q.get('rec') === '1') document.body.classList.add('rec-safe');
   if (q.get('judge') === '1'){ setMode('lab'); setTimeout(()=>judgeDemo(), 900); }
   else if (q.get('mode') === 'lab') setMode('lab');
   else setMode('chat');
