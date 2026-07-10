@@ -12,7 +12,7 @@ zero stale-fact leakage.
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
 > **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
-> **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site · **Demo video (1:52, narrated):** https://youtu.be/s0cigCj991U
+> **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site · **Demo video (2:07, narrated):** https://youtu.be/teJQ3MEEFJY
 >
 > **One click on the live demo: ▶ RUN THE JUDGE DEMO (≈2 min, 5 live-verified checks)** — auto-plays teach →
 > cross-session recall → belief revision (supersede) → sleep-cycle consolidation.
