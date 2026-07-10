@@ -74,6 +74,16 @@ python3 eval/run_ablation.py semantic_only   # S5 flips to MISSED
 python3 eval/run_ablation.py no_arbiter      # S2 keeps the stale fact alive
 ```
 
+## Re-run on the final submission commit (2026-07-10)
+
+Same suite, re-executed after the reliability hardening (code state
+`f83784d`: atomic revision/consolidation, deferred reinforcement, cluster
+purity guard): **5/5 passed** — 182 tk vs 478 tk prompt (S1), supersede
+fired with zero stale recall (S2), 47 tk whole store vs 965 tk raw history
+(S3), 3 fragments → 1 with store 97 → 73 tk (S4), allergy rescued at
+semantic 0.25 (S5). Live judge demo verified the same day from two
+external vantages (CN direct and US exit): 5/5 in ≈50 s each.
+
 ## Reproduce
 
 ```bash
