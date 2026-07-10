@@ -20,6 +20,7 @@ score components so the UI can visualize *why* a memory was recalled.
 
 import json
 import math
+import re
 import sqlite3
 import threading
 import time
@@ -116,6 +117,11 @@ Rules:
 Respond with ONLY a JSON array:
 [{"type":"preference|semantic|procedural|episodic","content":"User ...","importance":0.0}]"""
 
+_UPDATE_SIGNAL = re.compile(
+    r"\b(update[d]?|chang(?:e[ds]?|ing)|correction|instead of|no longer|"
+    r"not\s+\w+\s+anymore|switch(?:ed)?\s+to|moved\s+to|now\s+(?:on|use[s]?|is|at))\b",
+    re.I)
+
 ARBITER_PROMPT = """You maintain a long-term memory store about one user.
 A NEW memory has just been extracted:
 NEW: {new}
@@ -129,6 +135,12 @@ Decide how NEW relates to the EXISTING entries:
                        (changed job/city/status, reversed preference, new value
                        for the same attribute...)
 - both empty        -> NEW is a genuinely distinct fact; keep everything
+
+THE DECISIVE TEST: if NEW and an EXISTING entry describe the SAME attribute of
+the user's life (a schedule, a version, a location, an owner, a tool...) but
+with DIFFERENT values, that is an update -> replaces, never duplicate_of.
+e.g. existing "deploy window is Tue/Thu 14:00" + new "deploy window is Mon/Wed
+10:00" -> replaces. Only answer duplicate_of when the VALUES genuinely match.
 
 Facts that can coexist (e.g. two different hobbies, a diet plus an allergy)
 are NOT replacements.
@@ -300,6 +312,10 @@ class MemoryEngine(object):
         )
         if not isinstance(candidates, list):
             return []
+        # Explicit update phrasing in the raw turn ("update:", "changed",
+        # "no longer", "now uses"...) means same-attribute collisions below
+        # should supersede, even if the arbiter under-calls them as duplicates.
+        update_hint = bool(_UPDATE_SIGNAL.search(user_msg))
         ops = []
         for cand in candidates[:6]:
             if not isinstance(cand, dict):
@@ -314,12 +330,14 @@ class MemoryEngine(object):
                 importance = 0.5
             if len(content) < 8:
                 continue
-            op = self._remember_one(user_id, session_id, mtype, content, importance)
+            op = self._remember_one(user_id, session_id, mtype, content,
+                                    importance, update_hint=update_hint)
             if op:
                 ops.append(op)
         return ops
 
-    def _remember_one(self, user_id, session_id, mtype, content, importance):
+    def _remember_one(self, user_id, session_id, mtype, content, importance,
+                      update_hint=False):
         vec = qwen_client.embed([content])[0]
         neighbors = []
         for m in self._active(user_id):
@@ -347,6 +365,13 @@ class MemoryEngine(object):
         if neighbors and ABLATION != "no_arbiter":
             verdict = self._arbitrate(content, [m for _s, m in neighbors[:4]])
             dup = verdict.get("duplicate_of")
+            if dup is not None and update_hint:
+                # The user explicitly said something changed. If the arbiter
+                # still calls it a duplicate, supersede anyway: lossless when
+                # the values truly match, a fix when it under-called an update.
+                verdict["replaces"] = [dup] + [
+                    m for m in verdict.get("replaces", []) if m is not dup]
+                dup = None
             if dup is not None:
                 self._exec(
                     "UPDATE memories SET strength=MIN(strength+1.0, 8.0), "

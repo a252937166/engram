@@ -271,12 +271,17 @@ footer a:hover{color:#fff}
 @media (max-width:1180px){
   #inspector{display:none}
 }
+#narrowNote{display:none;margin:10px 10px 0;padding:9px 14px;border:1px solid rgba(167,139,250,.4);
+  border-radius:10px;background:rgba(30,16,54,.72);color:#cabcf0;font-size:12.5px;line-height:1.55;
+  letter-spacing:.02em}
+#narrowNote b{color:#e9defd}
 @media (max-width:900px){
   main{padding:10px}
   #chatPanel{width:100%}
   #center{display:none}
   header{padding:12px 14px;gap:10px}
   .h-stat,.badge{display:none}
+  #narrowNote{display:block}
 }
 </style>
 </head>
@@ -299,6 +304,10 @@ footer a:hover{color:#fff}
     <button class="btn" id="sleepBtn" title="Consolidate similar memories, prune weak ones">◐ Sleep cycle</button>
     <div class="badge"><span class="dot"></span> QWEN3.7-PLUS · QWEN CLOUD</div>
   </header>
+
+  <div id="narrowNote">⟷ <b>This window is too narrow for the full demo.</b> Widen it (or use a
+  larger screen) to see the live memory constellation and the memory inspector — the
+  heart of ENGRAM. Chat still works below.</div>
 
   <main>
     <section class="panel" id="chatPanel">
