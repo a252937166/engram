@@ -13,7 +13,7 @@ the app is live.
   extraction / arbitration / consolidation) · `text-embedding-v4`
   (256-d recall vectors).
 - The exact file is also served read-only **from the production ECS
-  itself**: http://47.93.234.51:8080/qwen_client.py
+  itself**: https://engram.hackthon.site/qwen_client.py
 
 ## 2. Alibaba Cloud runtime (ECS)
 
@@ -22,8 +22,11 @@ the app is live.
 | Instance ID | `i-2zefhmpp3htrijv7plwr` |
 | Region / zone | `cn-beijing` / `cn-beijing-c` |
 | Public IP | `47.93.234.51` |
-| Stack | nginx → systemd service `engram` → Python-stdlib backend → SQLite (WAL) |
-| Live app | http://47.93.234.51:8080 (HTTPS mirror: https://engram.axiqo.xyz) |
+| Stack | nginx (public HTTPS ingress) → systemd service `engram` → Python-stdlib backend on `127.0.0.1` → SQLite (WAL) |
+| Live app | https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz) |
+
+The application process deliberately binds only the loopback interface;
+nginx is the sole public entry point (TLS, rate limiting, static frontend).
 
 Instance identity read from the Alibaba Cloud **ECS metadata service**
 (only reachable from inside an ECS instance):
@@ -51,7 +54,7 @@ $ systemctl status engram
 Live health endpoint (public — run this yourself):
 
 ```console
-$ curl http://47.93.234.51:8080/api/health
+$ curl https://engram.hackthon.site/api/health
 {"ok": true, "engine": "engram/1.0", "chat_model": "qwen3.7-plus",
  "fast_model": "qwen3.6-flash", "embed_model": "text-embedding-v4",
  "provider": "Qwen Cloud (Alibaba Cloud Model Studio)"}
@@ -72,7 +75,7 @@ $ curl http://47.93.234.51:8080/api/health
 ## 4. Reproduce in one minute
 
 ```bash
-curl http://47.93.234.51:8080/api/health          # provider string
-curl http://47.93.234.51:8080/qwen_client.py       # the code, from the ECS
-open http://47.93.234.51:8080                      # full app, live
+curl https://engram.hackthon.site/api/health       # provider string
+curl https://engram.hackthon.site/qwen_client.py   # the code, from the ECS
+open https://engram.hackthon.site                  # full app, live
 ```

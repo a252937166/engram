@@ -10,7 +10,7 @@ zero stale-fact leakage.
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
 > **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
-> **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site (direct IP: http://47.93.234.51:8080) · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
+> **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
 >
 > **One click on the live demo: ▶ RUN THE JUDGE DEMO (≈2 min, 5 live-verified checks)** — auto-plays teach →
 > cross-session recall → belief revision (supersede) → sleep-cycle consolidation.
@@ -140,7 +140,7 @@ https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 
 The full stack (nginx + systemd + SQLite + backend) is deployed on
 **Alibaba Cloud ECS instance `i-2zefhmpp3htrijv7plwr` (cn-beijing-c)** —
-live at https://engram.hackthon.site (direct IP http://47.93.234.51:8080) — with a
+live at https://engram.hackthon.site — with a
 global HTTPS mirror at https://engram.axiqo.xyz. All model inference (reasoning, extraction,
 arbitration, embeddings) runs on Qwen Cloud, so both the hosting and the AI
 backbone are Alibaba Cloud. Deployment proof video:

@@ -92,4 +92,4 @@ retrieval contents), not LLM-graded.
 - Models: `qwen3.7-plus`, `qwen3.6-flash`, `text-embedding-v4` via
   `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
 - Production reference host: Alibaba Cloud ECS `i-2zefhmpp3htrijv7plwr`
-  (cn-beijing-c) — live at http://47.93.234.51:8080
+  (cn-beijing-c) — live at https://engram.hackthon.site

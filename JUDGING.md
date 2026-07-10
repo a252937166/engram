@@ -5,7 +5,7 @@ Five ways to verify ENGRAM, fastest first.
 ## 0. Live instance (10 seconds)
 
 ```bash
-curl https://engram.hackthon.site/api/health   # Alibaba Cloud ECS, Beijing (direct IP: http://47.93.234.51:8080)
+curl https://engram.hackthon.site/api/health   # Alibaba Cloud ECS, Beijing
 ```
 
 Open https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz) —
