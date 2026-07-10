@@ -8,9 +8,13 @@ Five ways to verify ENGRAM, fastest first.
 curl https://engram.hackthon.site/api/health   # Alibaba Cloud ECS, Beijing
 ```
 
-Open https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz) —
-you land on a seeded constellation; chat, watch recalls/supersedes live,
-press **Sleep Cycle**. Try the DevOps scenario at
+Open https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz).
+You land in the **Conversation Workbench** — left: persistent sessions,
+center: full-height Qwen conversation, right: live per-turn Memory
+Evidence (selected/rejected candidates, score waterfall, injected
+context, memory ops — every answer's meta line replays its frozen audit).
+Click **MEMORY LAB** (or open `?judge=1`) for the constellation view and
+the five-check Track-1 proof scenario. DevOps runbook memory:
 https://engram.hackthon.site/?seed=devops
 
 ## 1. Offline smoke — no API key needed (30 seconds)

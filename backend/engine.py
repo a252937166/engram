@@ -232,13 +232,21 @@ class MemoryEngine(object):
                     prompt_tokens INTEGER,
                     completion_tokens INTEGER,
                     elapsed_ms INTEGER,
-                    created_at REAL
+                    created_at REAL,
+                    policy_json TEXT
                 );
                 CREATE INDEX IF NOT EXISTS idx_audit_session
                     ON turn_audits(session_id);
                 """
             )
             self._db.commit()
+            # migration: policy_json on turn_audits (pre-policy databases)
+            cols = [r[1] for r in self._db.execute(
+                "PRAGMA table_info(turn_audits)").fetchall()]
+            if "policy_json" not in cols:
+                self._db.execute(
+                    "ALTER TABLE turn_audits ADD COLUMN policy_json TEXT")
+                self._db.commit()
 
     # ------------------------------------------------------------- rows ----
     def _rows(self, sql, args=()):
@@ -351,6 +359,49 @@ class MemoryEngine(object):
                     "budget_tokens": budget_tokens,
                     "spent_tokens": spent}
         return picked
+
+    # Risky-action verbs a standing procedural rule can veto.
+    _ACTION_RE = re.compile(
+        r"\b(restart|reboot|delete|drop|roll\s?back|scale\s+(?:down|up)|"
+        r"shut\s?down|kill|terminate|redeploy|force[- ]push|truncate)\b", re.I)
+    _RULE_RE = re.compile(
+        r"\b(never|must not|do not|don't|forbid|prohibit|always)\b", re.I)
+
+    def evaluate_policy(self, query, recalled):
+        """Server-side policy decision for this turn.
+
+        If the user proposes a risky action and a recalled *procedural*
+        memory states a standing prohibition, the gate denies before any
+        generation or tool dispatch. The verdict is injected into the
+        prompt, persisted in the turn audit, and returned to the UI - the
+        display renders the server decision, it never invents one.
+        """
+        act = self._ACTION_RE.search(query or "")
+        if not act:
+            return None
+        for m in recalled:
+            if m.get("type") != "procedural":
+                continue
+            if not self._RULE_RE.search(m.get("content", "")):
+                continue
+            return {
+                "decision": "deny",
+                "action": act.group(0).lower(),
+                "rule_memory_id": m["id"],
+                "rule": m["content"],
+                "retrieval_score": m.get("score"),
+                "reason": "A standing procedural memory prohibits the "
+                          "proposed action.",
+                "enforcement": "server-side gate: verdict injected into the "
+                               "prompt and tool dispatch suppressed for "
+                               "this turn",
+            }
+        return {
+            "decision": "allow",
+            "action": act.group(0).lower(),
+            "reason": "No standing procedural rule matches the proposed "
+                      "action.",
+        }
 
     def commit_recall_usage(self, user_id, memory_ids):
         """Reinforce recalled memories - called only after the turn succeeds.
@@ -911,14 +962,15 @@ class MemoryEngine(object):
 
     def log_turn_audit(self, message_id, user_id, session_id, query,
                        retrieval, memory_context, ops, model, usage,
-                       elapsed_ms):
+                       elapsed_ms, policy=None):
         """Freeze this turn's full memory decision so history can replay it."""
         self._exec(
             "INSERT OR REPLACE INTO turn_audits(message_id, user_id, "
             "session_id, query, selected_json, rejected_json, memory_context, "
             "budget_tokens, spent_tokens, memory_ops_json, model, "
-            "prompt_tokens, completion_tokens, elapsed_ms, created_at) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "prompt_tokens, completion_tokens, elapsed_ms, created_at, "
+            "policy_json) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (message_id, user_id, session_id, query[:2000],
              json.dumps(retrieval.get("picked", []), ensure_ascii=False),
              json.dumps(retrieval.get("rejected", []), ensure_ascii=False),
@@ -926,7 +978,8 @@ class MemoryEngine(object):
              retrieval.get("budget_tokens"), retrieval.get("spent_tokens"),
              json.dumps(ops or [], ensure_ascii=False), model,
              usage.get("prompt_tokens"), usage.get("completion_tokens"),
-             elapsed_ms, _now()),
+             elapsed_ms, _now(),
+             json.dumps(policy, ensure_ascii=False) if policy else None),
         )
 
     def turn_audit(self, user_id, message_id):
@@ -939,6 +992,8 @@ class MemoryEngine(object):
         a = rows[0]
         for k in ("selected_json", "rejected_json", "memory_ops_json"):
             a[k.replace("_json", "")] = json.loads(a.pop(k) or "[]")
+        pj = a.pop("policy_json", None)
+        a["policy"] = json.loads(pj) if pj else None
         return a
 
     # -------------------------------------------------------------- quota ---

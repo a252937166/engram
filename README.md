@@ -23,8 +23,8 @@ zero stale-fact leakage.
 > Domain https://engram.hackthon.site is live over HTTPS — ICP filing 蜀ICP备2026037600号-1 approved.
 
 LLM agents wake up with amnesia every session. ENGRAM gives a Qwen agent a
-**persistent, self-organizing long-term memory** modeled on how biological
-memory actually works — and renders the whole thing live as an interactive
+**persistent, self-organizing long-term memory** inspired by memory lifecycle
+concepts — recall, reinforcement, revision, consolidation, forgetting — and renders the whole thing live as an interactive
 "memory constellation," so every recall, reinforcement, contradiction and
 consolidation is visible and explainable.
 
@@ -52,9 +52,12 @@ A reproducible suite ([`eval/run_eval.py`](eval/run_eval.py), method and full
 tables in [`docs/evaluation.md`](docs/evaluation.md)) benchmarks ENGRAM
 against a **no-memory** and a **full-history-stuffing** baseline on the same
 `qwen3.7-plus` model. All token counts are read from real Qwen Cloud usage
-fields. **5/5 scenarios pass:**
+fields. **5/5 scenarios pass** (original benchmark run — July 4; the
+final-submission re-run on July 10 also passed 5/5 with the same shape —
+both runs plus ablations and a 10× stability report live in
+[docs/evaluation.md](docs/evaluation.md)):
 
-| Track 1 requirement | Measured result |
+| Track 1 requirement | Measured result (July 4 run) |
 |---|---|
 | Recall across sessions, under noise | Allergy + diet recalled after 13 unrelated turns and a session switch; picnic menu is safe — **182 tk prompt vs 512 tk** for history stuffing |
 | Timely forgetting of outdated info | Employer change fires a supersede op; **zero stale-fact leakage** in a fresh session (structural, not prompt luck) |

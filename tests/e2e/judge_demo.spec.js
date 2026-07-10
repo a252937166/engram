@@ -154,6 +154,66 @@ test.describe('conversation workbench (default)', () => {
     expect(anchored).toBe(true);
   });
 
+  test('stop preserves the partial response and marks it stopped', async ({ page }) => {
+    await page.goto('/');
+    const input = page.getByPlaceholder('Talk to your agent');
+    await input.fill('Tell me something and I will interrupt you mid-stream.');
+    await input.press('Enter');
+    const send = page.locator('#send');
+    await expect(send).toHaveClass(/stop/);           // button became Stop
+    await send.click();                               // abort mid-stream
+    await expect(send).not.toHaveClass(/stop/, { timeout: 10000 });
+    await expect(page.locator('.msg.bot').last().locator('.bubble'))
+      .toContainText('stopped', { timeout: 10000 });
+  });
+
+  test('server policy verdict: deny is enforced, audited, and replayable', async ({ page }) => {
+    await page.goto('/');
+    const input = page.getByPlaceholder('Talk to your agent');
+    await input.fill('Standing rule: never restart the billing pods directly, always drain traffic first.');
+    await input.press('Enter');
+    await expect(page.locator('.msg.bot').last().locator('.audit-badge'))
+      .toBeVisible({ timeout: 30000 });
+    await input.fill('Latency is spiking — should I restart the billing pod right now?');
+    await input.press('Enter');
+    const gate = page.locator('.policy-gate').last();
+    await expect(gate).toBeVisible({ timeout: 30000 });
+    await expect(gate).toContainText('ACTION DENIED');
+    await expect(gate).toContainText('server-side gate');
+    // the verdict is persisted in the turn audit
+    const badge = page.locator('.msg.bot').last().locator('.audit-badge');
+    await expect(badge).toBeVisible({ timeout: 30000 });
+    const mid = await badge.getAttribute('data-mid');
+    const audit = await page.evaluate(async id => {
+      const uid = localStorage.getItem('engram_uid');
+      return await (await fetch('/api/turn_audit?user_id='+uid+'&message_id='+id)).json();
+    }, mid);
+    expect(audit.policy.decision).toBe('deny');
+    expect(audit.policy.rule_memory_id).toBeTruthy();
+    expect(audit.policy.enforcement).toContain('server-side');
+  });
+
+  test('graph label pins on click and clears on Escape', async ({ page }) => {
+    await page.goto('/');
+    const input = page.getByPlaceholder('Talk to your agent');
+    await input.fill('I am vegetarian and I work at Acme Robotics.');
+    await input.press('Enter');
+    await expect(page.locator('.msg.bot').last().locator('.audit-badge'))
+      .toBeVisible({ timeout: 30000 });
+    await page.locator('#modeSwitch button[data-mode="lab"]').click();
+    const pinned = await page.evaluate(() => {
+      const n = [...nodes.values()][0];
+      cv.dispatchEvent(new MouseEvent('click', {clientX: n.x, clientY: n.y, bubbles: true}));
+      return [...nodes.values()].some(x => x.pinned);
+    });
+    expect(pinned).toBe(true);
+    await page.keyboard.press('Escape');
+    const cleared = await page.evaluate(() => ![...nodes.values()].some(x => x.pinned));
+    expect(cleared).toBe(true);
+    // that same Escape must NOT have exited the lab (pin layer absorbed it)
+    await expect(page.locator('#proofBar')).toBeVisible();
+  });
+
 });
 
 test.describe('memory lab', () => {

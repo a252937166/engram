@@ -33,6 +33,7 @@ module.exports = defineConfig({
     reuseExistingServer: false,
     env: {
       ENGRAM_FAKE_QWEN: '1',
+      ENGRAM_FAKE_STREAM_DELAY: '0.06',
       ENGRAM_DB: 'e2e-tmp.db',
       ENGRAM_SEED_USER: '',
       ENGRAM_PORT: '8788',

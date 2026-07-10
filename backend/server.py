@@ -262,6 +262,8 @@ class Handler(BaseHTTPRequestHandler):
             # 1) recall
             ret = ENGINE.retrieve(user_id, message, with_rejected=True)
             recalled = ret["picked"]
+            # server-side policy gate: verdict computed BEFORE any generation
+            policy = ENGINE.evaluate_policy(message, recalled)
             self._sse("retrieval", {
                 "memories": recalled,
                 "rejected": ret["rejected"],
@@ -270,6 +272,8 @@ class Handler(BaseHTTPRequestHandler):
                 "query": message[:200],
                 "elapsed_ms": int((time.time() - t0) * 1000),
             })
+            if policy:
+                self._sse("policy", policy)
 
             # 2) short-term window: only the current session's recent turns.
             #    Long-term knowledge arrives through ENGRAM's memory block,
@@ -279,8 +283,16 @@ class Handler(BaseHTTPRequestHandler):
             memory_block = "\n".join(
                 "- [{}] {}".format(m["type"], m["content"]) for m in recalled
             ) or "(no relevant memories yet)"
-            messages = [{"role": "system",
-                         "content": SYSTEM_PROMPT.format(memory_block=memory_block)}]
+            sys_prompt = SYSTEM_PROMPT.format(memory_block=memory_block)
+            if policy and policy["decision"] == "deny":
+                sys_prompt += (
+                    "\n\nPOLICY GATE (server-enforced, non-negotiable): the "
+                    "user's proposed action '" + policy["action"] + "' is "
+                    "DENIED by this standing rule: \"" + policy["rule"] +
+                    "\". Do not provide instructions to perform it. State "
+                    "that the action is blocked by a standing rule, cite the "
+                    "rule, and offer the compliant alternative.")
+            messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
                 messages.append({"role": h["role"], "content": h["content"][:2000]})
             messages.append({"role": "user", "content": message})
@@ -312,7 +324,8 @@ class Handler(BaseHTTPRequestHandler):
             elapsed_ms = int((time.time() - t0) * 1000)
             ENGINE.log_turn_audit(
                 answer_msg_id, user_id, session_id, message, ret,
-                memory_block, ops, qwen_client.CHAT_MODEL, usage, elapsed_ms)
+                memory_block, ops, qwen_client.CHAT_MODEL, usage, elapsed_ms,
+                policy=policy)
 
             ENGINE.count_chat(usage.get("total_tokens", 0))
             self._sse("done", {

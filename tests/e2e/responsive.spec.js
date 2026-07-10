@@ -4,12 +4,20 @@
 const { test, expect } = require('@playwright/test');
 
 test('tabs layout: chat is usable, engine panes reachable', async ({ page }) => {
-  // narrow viewports: the workbench collapses to a single conversation
-  // column; the lab keeps its tab layout
+  // narrow viewports: single conversation column, but sessions and
+  // evidence stay reachable through drawers (never display:none'd away)
   await page.goto('/');
   await expect(page.locator('#wsConv')).toBeVisible();
   const inputWb = page.getByPlaceholder('Talk to your agent');
   await expect(inputWb).toBeVisible();
+
+  await page.locator('#drawEvid').click();
+  await expect(page.locator('#wsEvid')).toBeVisible();
+  await expect(page.locator('#evTabs button')).toHaveCount(4);
+  await page.keyboard.press('Escape');
+  await page.locator('#drawSess').click();
+  await expect(page.locator('#wsSess')).toBeVisible();
+  await page.keyboard.press('Escape');
 
   await page.locator('#modeSwitch button[data-mode="lab"]').click();
   await expect(page.locator('#tabBar')).toBeVisible();

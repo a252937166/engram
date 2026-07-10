@@ -209,9 +209,14 @@ def chat_stream(messages, model=None, temperature=0.7, max_tokens=1200,
     Yields ("delta", text) chunks and finally ("usage", usage_dict).
     """
     if FAKE:
+        # optional per-word delay so tests can exercise mid-stream behaviour
+        # (Stop button, scroll-follow) against a realistically paced stream
+        delay = float(os.environ.get("ENGRAM_FAKE_STREAM_DELAY", "0"))
         user = next((m["content"] for m in reversed(messages)
                      if m["role"] == "user"), "")
         for word in ("[offline fake-qwen] Acknowledged: " + user[:80]).split():
+            if delay:
+                time.sleep(delay)
             yield ("delta", word + " ")
         yield ("usage", {"total_tokens": 0, "prompt_tokens": 0})
         return
