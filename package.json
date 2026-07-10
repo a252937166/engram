@@ -1,0 +1,11 @@
+{
+  "name": "engram",
+  "private": true,
+  "description": "E2E tooling for the ENGRAM memory engine (Playwright, offline fake-Qwen mode)",
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}

@@ -14,5 +14,35 @@ jobs:
           python-version: "3.8"   # oldest easily available; code targets 3.6 stdlib
       - name: Compile all sources
         run: python3 -m py_compile backend/*.py eval/*.py tests/*.py
+      - name: Frontend JS syntax
+        run: python3 tests/check_frontend_js.py
       - name: Offline pipeline smoke (no API key needed)
         run: ENGRAM_FAKE_QWEN=1 python3 tests/smoke_offline.py
+      - name: Session isolation + pagination (HTTP)
+        run: ENGRAM_FAKE_QWEN=1 python3 tests/test_session_isolation.py
+      - name: Belief revision (store-level)
+        run: ENGRAM_FAKE_QWEN=1 python3 tests/test_belief_revision.py
+      - name: Sleep cluster purity
+        run: ENGRAM_FAKE_QWEN=1 python3 tests/test_sleep_cluster_purity.py
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright
+        run: |
+          npm ci || npm i
+          npx playwright install --with-deps chromium
+      - name: Judge-demo E2E (offline fake Qwen)
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: test-results/

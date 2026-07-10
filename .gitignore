@@ -7,3 +7,7 @@ __pycache__/
 engram.env
 .secrets/
 .playwright-cli/
+node_modules/
+test-results/
+e2e-tmp.db*
+playwright-report/

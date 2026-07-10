@@ -71,14 +71,17 @@ def _fake_extract(user_text):
         add("preference", "User has a severe allergy mentioned in conversation.", 0.95)
     if "vegetarian" in t:
         add("preference", "User is vegetarian.", 0.7)
-    employer_change = _re.search(r"(?:just joined|now at|moved to) ([A-Z][\w]*(?: [A-Z][\w]*)?)", user_text)
+    employer_change = _re.search(
+        r"(?:just joined|moved to|now (?:work(?:s|ing)? )?at) "
+        r"([A-Z][\w]*(?: [A-Z][\w]*)?)", user_text)
     if employer_change:
-        add("semantic", "User works at %s." % employer_change.group(1), 0.85)
-    elif "i'm " in t and " work " in t:
-        m = _re.search(r"work (?:as [\w ]+? )?at ([A-Z][\w]*)", user_text)
+        add("semantic", "User now works at %s." % employer_change.group(1), 0.85)
+    else:
+        m = _re.search(r"work(?:s|ing)? (?:as [\w -]+? )?at "
+                       r"([A-Z][\w]*(?: [A-Z][\w]*)?)", user_text)
         if m:
-            add("semantic", "User works at %s as described." % m.group(1), 0.75)
-        else:
+            add("semantic", "User works at %s." % m.group(1), 0.75)
+        elif "i'm " in t and " work " in t:
             add("semantic", "User described their job: " + user_text[:120], 0.7)
     if not employer_change and ("never" in t or "always" in t or "don't" in t):
         add("procedural", "Standing instruction: " + user_text[:120], 0.8)
@@ -89,9 +92,28 @@ def _fake_extract(user_text):
             add("episodic", "Tokyo trip: " + b[:100].lstrip("I ").strip() + ".", 0.5)
     elif _re.search(r"planning|trip|tokyo|flight|hotel|vacation", t):
         add("episodic", "User plan: " + user_text[:120].rstrip(".") + ".", 0.5)
-    if "now" in t and ("left" in t or "moved" in t or "changed" in t):
+    if not employer_change and "now" in t and (
+            "left" in t or "moved" in t or "changed" in t):
         add("semantic", "Update: " + user_text[:120], 0.8)
     return out[:6]
+
+
+def _fake_consolidate(prompt_text):
+    """Deterministic merge summary: keep the distinct clauses of each item."""
+    body = prompt_text.split("Memories:", 1)[-1]
+    bits = []
+    for line in body.splitlines():
+        line = line.strip().lstrip("-•").strip()
+        if not line or line.lower().startswith("respond with"):
+            continue
+        frag = line.rstrip(".")
+        for pre in ("User plan:", "Tokyo trip:", "User", "plan:"):
+            if frag.startswith(pre):
+                frag = frag[len(pre):].strip()
+        if frag and frag not in bits:
+            bits.append(frag)
+    merged = "User " + "; ".join(bits)[:180] + "."
+    return merged
 
 
 def _fake_arbitrate(prompt_text):
@@ -161,6 +183,8 @@ def chat(messages, model=None, temperature=0.7, max_tokens=1200,
         if "duplicate_of" in user or "EXISTING related memories" in user:
             import json as _j
             return _j.dumps(_fake_arbitrate(user)), {"total_tokens": 0}
+        if "Merge these related memories" in user:
+            return _fake_consolidate(user), {"total_tokens": 0}
         return ("[offline fake-qwen] Acknowledged: " + user[:80]), {"total_tokens": 0}
     resp = _request(
         "/chat/completions",
