@@ -84,6 +84,20 @@ fired with zero stale recall (S2), 47 tk whole store vs 965 tk raw history
 semantic 0.25 (S5). Live judge demo verified the same day from two
 external vantages (CN direct and US exit): 5/5 in ≈50 s each.
 
+## Stability: 10 consecutive runs (2026-07-10, real API)
+
+The two mechanisms most likely to be probed, re-run 10x each on fresh
+DBs (engine-direct, production models):
+
+| Check | Result | Notes |
+|---|---|---|
+| S2 belief revision (Acme -> Nova) | **10 / 10** | `updated` op fired, stale recall 0, exactly one active employer fact, every run |
+| S5 critical rescue below the floor | **10 / 10** | allergy recalled at semantic **0.25-0.31** across runs |
+| Live judge demo end-to-end | **2 / 2** external vantages (CN direct, US exit) | 5/5 in ~50 s each |
+
+Latency (per full scenario, incl. extraction + arbitration + embedding):
+S2 p50 14.3 s / p95 20.7 s - S5 p50 18.8 s / p95 28.8 s.
+
 ## Reproduce
 
 ```bash
