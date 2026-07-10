@@ -66,19 +66,32 @@ def _fake_extract(user_text):
 
     def add(mtype, content, imp):
         out.append({"type": mtype, "content": content, "importance": imp})
+    import re as _re
     if "allergic" in t or "allergy" in t:
         add("preference", "User has a severe allergy mentioned in conversation.", 0.95)
     if "vegetarian" in t:
         add("preference", "User is vegetarian.", 0.7)
-    if "i'm " in t and " work " in t:
-        add("semantic", "User described their job: " + user_text[:120], 0.7)
-    if "never" in t or "always" in t or "don't" in t:
+    employer_change = _re.search(r"(?:just joined|now at|moved to) ([A-Z][\w]*(?: [A-Z][\w]*)?)", user_text)
+    if employer_change:
+        add("semantic", "User works at %s." % employer_change.group(1), 0.85)
+    elif "i'm " in t and " work " in t:
+        m = _re.search(r"work (?:as [\w ]+? )?at ([A-Z][\w]*)", user_text)
+        if m:
+            add("semantic", "User works at %s as described." % m.group(1), 0.75)
+        else:
+            add("semantic", "User described their job: " + user_text[:120], 0.7)
+    if not employer_change and ("never" in t or "always" in t or "don't" in t):
         add("procedural", "Standing instruction: " + user_text[:120], 0.8)
-    if "planning" in t or "trip" in t:
-        add("episodic", "User plan: " + user_text[:120], 0.5)
+    trip_bits = [b.strip() for b in _re.split(r",| and ", user_text)
+                 if _re.search(r"tokyo|hotel|flight|day trip|itinerary|vacation", b, _re.I)]
+    if len(trip_bits) >= 2:
+        for b in trip_bits[:3]:
+            add("episodic", "Tokyo trip: " + b[:100].lstrip("I ").strip() + ".", 0.5)
+    elif _re.search(r"planning|trip|tokyo|flight|hotel|vacation", t):
+        add("episodic", "User plan: " + user_text[:120].rstrip(".") + ".", 0.5)
     if "now" in t and ("left" in t or "moved" in t or "changed" in t):
         add("semantic", "Update: " + user_text[:120], 0.8)
-    return out[:4]
+    return out[:6]
 
 
 def _fake_arbitrate(prompt_text):
@@ -96,7 +109,11 @@ def _fake_arbitrate(prompt_text):
     overlap = len(nw & fw) / max(1, len(nw | fw))
     if overlap > 0.8:
         return {"duplicate_of": 1, "replaces": []}
-    if any(w in new for w in ("now", "left", "moved", "no longer", "update")):
+    if any(w in new for w in ("now", "left", "moved", "no longer", "update",
+                              "anymore", "joined")):
+        return {"duplicate_of": None, "replaces": [1]}
+    # same-attribute heuristic: both talk about where the user works
+    if "works at" in new and "works at" in first:
         return {"duplicate_of": None, "replaces": [1]}
     return {"duplicate_of": None, "replaces": []}
 

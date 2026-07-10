@@ -232,9 +232,14 @@ class Handler(BaseHTTPRequestHandler):
         t0 = time.time()
         try:
             # 1) recall
-            recalled = ENGINE.retrieve(user_id, message)
+            ret = ENGINE.retrieve(user_id, message, with_rejected=True)
+            recalled = ret["picked"]
             self._sse("retrieval", {
                 "memories": recalled,
+                "rejected": ret["rejected"],
+                "budget_tokens": ret["budget_tokens"],
+                "spent_tokens": ret["spent_tokens"],
+                "query": message[:200],
                 "elapsed_ms": int((time.time() - t0) * 1000),
             })
 

@@ -20,6 +20,7 @@ score components so the UI can visualize *why* a memory was recalled.
 
 import json
 import math
+import os
 import re
 import sqlite3
 import threading
@@ -50,7 +51,14 @@ SEMANTIC_FLOOR = 0.25       # below this similarity a memory is never recalled
 CRITICAL_FLOOR = 0.15       # ...unless it is safety-critical (importance>=.85)
 DUPLICATE_SIM = 0.90        # >= : same fact, reinforce instead of insert
 CONFLICT_SIM = 0.45         # >= : related enough to consult the arbiter model
-CLUSTER_SIM = 0.58          # >= : sleep-cycle consolidation clustering
+# >= : sleep-cycle consolidation clustering. The fake (offline) embedding is a
+# character-trigram space whose cosines run lower than text-embedding-v4's, so
+# it gets a matched threshold; override with ENGRAM_CLUSTER_SIM either way.
+# calibrated against text-embedding-v4: same-theme episodic fragments
+# ("booked flights to Tokyo" / "hotel in Shinjuku" / "day trip to Hakone")
+# measure 0.56-0.65 pairwise while unrelated facts sit at 0.29-0.35.
+CLUSTER_SIM = float(os.environ.get(
+    "ENGRAM_CLUSTER_SIM", "0.40" if qwen_client.FAKE else "0.55"))
                             # (256-d qwen-v4 space: same-topic pairs measure
                             #  ~0.50-0.75, unrelated facts < ~0.48)
 RETENTION_FLOOR = 0.28      # below this a mature memory is forgotten
@@ -232,7 +240,8 @@ class MemoryEngine(object):
         return rows
 
     # --------------------------------------------------------- retrieval ---
-    def retrieve(self, user_id, query, budget_tokens=800, k_max=8):
+    def retrieve(self, user_id, query, budget_tokens=800, k_max=8,
+                 with_rejected=False):
         """Recall the most relevant memories for `query` under a token budget.
 
         Returns a list of memory dicts, each with a `score` and a
@@ -240,10 +249,14 @@ class MemoryEngine(object):
         """
         memories = self._active(user_id)
         if not memories or not query.strip():
+            if with_rejected:
+                return {"picked": [], "rejected": [],
+                        "budget_tokens": budget_tokens, "spent_tokens": 0}
             return []
         qvec = qwen_client.embed([query])[0]
         now = _now()
         scored = []
+        rejected = []
         for m in memories:
             if m["vec"] is None:
                 continue
@@ -253,6 +266,12 @@ class MemoryEngine(object):
             else:
                 floor = CRITICAL_FLOOR if m["importance"] >= 0.85 else SEMANTIC_FLOOR
             if sim < floor:
+                rejected.append({
+                    "id": m["id"], "type": m["type"],
+                    "content": m["content"], "similarity": round(sim, 4),
+                    "reason": "below_floor",
+                    "floor": round(floor, 2),
+                })
                 continue
             age_days = (now - (m["last_accessed"] or m["created_at"])) / DAY
             half_life = HALF_LIFE_DAYS.get(m["type"], 90.0)
@@ -276,7 +295,14 @@ class MemoryEngine(object):
         for score, comp, m in scored[: k_max * 3]:
             cost = _est_tokens(m["content"])
             if spent + cost > budget_tokens or len(picked) >= k_max:
-                break
+                rejected.append({
+                    "id": m["id"], "type": m["type"],
+                    "content": m["content"], "similarity": comp["semantic"],
+                    "score": round(score, 4),
+                    "reason": "over_budget" if spent + cost > budget_tokens
+                              else "over_k",
+                })
+                continue
             spent += cost
             picked.append(
                 {
@@ -300,6 +326,11 @@ class MemoryEngine(object):
                 "last_accessed=?, strength=MIN(strength+0.25, 8.0) WHERE id=?",
                 (now, p["id"]),
             )
+        if with_rejected:
+            rejected.sort(key=lambda r: -(r.get("score") or r["similarity"]))
+            return {"picked": picked, "rejected": rejected[:6],
+                    "budget_tokens": budget_tokens,
+                    "spent_tokens": spent}
         return picked
 
     # ------------------------------------------------------------ writes ---
