@@ -341,20 +341,35 @@ class MemoryEngine(object):
                     "tokens": cost,
                 }
             )
-        # Reinforcement: recalling a memory strengthens its trace.
-        now = _now()
-        for p in picked:
-            self._exec(
-                "UPDATE memories SET access_count=access_count+1, "
-                "last_accessed=?, strength=MIN(strength+0.25, 8.0) WHERE id=?",
-                (now, p["id"]),
-            )
+        # NOTE: retrieval is read-only. Reinforcement happens only after the
+        # answer actually succeeds - callers invoke commit_recall_usage()
+        # once the assistant turn is delivered and persisted, so timeouts,
+        # cancelled requests and failed generations never strengthen traces.
         if with_rejected:
             rejected.sort(key=lambda r: -(r.get("score") or r["similarity"]))
             return {"picked": picked, "rejected": rejected[:6],
                     "budget_tokens": budget_tokens,
                     "spent_tokens": spent}
         return picked
+
+    def commit_recall_usage(self, user_id, memory_ids):
+        """Reinforce recalled memories - called only after the turn succeeds.
+
+        Usage/strength signals stay honest: a retrieval whose answer timed
+        out, errored or was cancelled never counts as a successful use.
+        """
+        if not memory_ids:
+            return
+        now = _now()
+        with self._lock:
+            for mid in memory_ids:
+                self._db.execute(
+                    "UPDATE memories SET access_count=access_count+1, "
+                    "last_accessed=?, strength=MIN(strength+0.25, 8.0) "
+                    "WHERE id=? AND user_id=?",
+                    (now, mid, user_id),
+                )
+            self._db.commit()
 
     # ------------------------------------------------------------ writes ---
     def extract_and_remember(self, user_id, session_id, user_msg):
@@ -438,16 +453,35 @@ class MemoryEngine(object):
                 return {"op": "reinforced", "id": dup["id"],
                         "content": dup["content"], "similarity": None}
             if verdict.get("replaces"):
-                new_id = self._insert(user_id, session_id, mtype, content,
-                                      importance, vec)
+                # Belief revision is atomic: the successor and every
+                # supersede mark land in one transaction, so a crash can
+                # never leave old and new belief active side by side.
+                new_id = _uuid()
+                now = _now()
                 superseded = []
-                for old in verdict["replaces"]:
-                    self._exec(
-                        "UPDATE memories SET status='superseded', superseded_by=? "
-                        "WHERE id=?",
-                        (new_id, old["id"]),
-                    )
-                    superseded.append({"id": old["id"], "content": old["content"]})
+                with self._lock:
+                    try:
+                        self._db.execute(
+                            "INSERT INTO memories(id, user_id, type, content, "
+                            "embedding, importance, strength, created_at, "
+                            "last_accessed, source_session) "
+                            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                            (new_id, user_id, mtype, content, _pack(vec),
+                             importance, 1.0, now, now, session_id),
+                        )
+                        for old in verdict["replaces"]:
+                            self._db.execute(
+                                "UPDATE memories SET status='superseded', "
+                                "superseded_by=? WHERE id=?",
+                                (new_id, old["id"]),
+                            )
+                            superseded.append(
+                                {"id": old["id"], "content": old["content"]})
+                        self._db.commit()
+                    except Exception:
+                        self._db.rollback()
+                        raise
+                self._enforce_capacity(user_id)
                 return {"op": "updated", "id": new_id, "type": mtype,
                         "content": content, "superseded": superseded[0],
                         "superseded_all": superseded}
@@ -577,12 +611,51 @@ class MemoryEngine(object):
                 clusters.setdefault(find(i), []).append(mems[i])
 
             for group in clusters.values():
+                group = self._purify_cluster(group)
                 if len(group) < 3:
                     continue
                 merged = self._merge_cluster(user_id, group, mtype)
                 if merged:
                     report["consolidated"].append(merged)
         return report
+
+    @staticmethod
+    def _purify_cluster(group):
+        """Guard against union-find transitivity (A≈B, B≈C must not weld
+        unrelated A and C through the bridge B).
+
+        Two conditions, both measured on real clusters: every member must
+        stay coherent with the cluster centroid (theme membership,
+        ≥ CLUSTER_SIM), and no pair may be near-orthogonal (bridge floor at
+        0.6·CLUSTER_SIM — genuine same-theme chains measure well above it,
+        e.g. Tokyo fragments bottom out around 0.28 in the offline space
+        with CLUSTER_SIM 0.40, while unrelated ends sit near 0).
+        Violators are dropped greedily, least-cohesive member first.
+        """
+        bridge_floor = CLUSTER_SIM * 0.6
+        group = list(group)
+        while len(group) >= 3:
+            dim = len(group[0]["vec"])
+            centroid = [sum(m["vec"][d] for m in group) / len(group)
+                        for d in range(dim)]
+            norm = math.sqrt(sum(x * x for x in centroid)) or 1.0
+            centroid = [x / norm for x in centroid]
+            worst_i, worst_score, ok = None, 2.0, True
+            for i in range(len(group)):
+                c_sim = _cosine(group[i]["vec"], centroid)
+                min_pair = min(
+                    _cosine(group[i]["vec"], group[j]["vec"])
+                    for j in range(len(group)) if j != i
+                )
+                if c_sim < CLUSTER_SIM or min_pair < bridge_floor:
+                    ok = False
+                score = c_sim + min_pair
+                if score < worst_score:
+                    worst_score, worst_i = score, i
+            if ok:
+                return group
+            group.pop(worst_i)
+        return group
 
     def _merge_cluster(self, user_id, group, mtype="semantic"):
         items = "\n".join("- " + m["content"] for m in group)
@@ -604,19 +677,27 @@ class MemoryEngine(object):
         now = _now()
         importance = max(m["importance"] for m in group)
         strength = min(sum(m["strength"] for m in group), 8.0)
-        self._exec(
-            "INSERT INTO memories(id, user_id, type, content, embedding, "
-            "importance, strength, created_at, last_accessed, source_session) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (new_id, user_id, mtype, summary, _pack(vec), importance,
-             strength, now, now, "sleep-cycle"),
-        )
-        for m in group:
-            self._exec(
-                "UPDATE memories SET status='consolidated', consolidated_into=? "
-                "WHERE id=?",
-                (new_id, m["id"]),
-            )
+        # Consolidation is atomic: parent insert + every child mark commit
+        # together, so a crash can never orphan half a cluster.
+        with self._lock:
+            try:
+                self._db.execute(
+                    "INSERT INTO memories(id, user_id, type, content, embedding, "
+                    "importance, strength, created_at, last_accessed, source_session) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (new_id, user_id, mtype, summary, _pack(vec), importance,
+                     strength, now, now, "sleep-cycle"),
+                )
+                for m in group:
+                    self._db.execute(
+                        "UPDATE memories SET status='consolidated', "
+                        "consolidated_into=? WHERE id=?",
+                        (new_id, m["id"]),
+                    )
+                self._db.commit()
+            except Exception:
+                self._db.rollback()
+                raise
         return {
             "id": new_id,
             "content": summary,

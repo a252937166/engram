@@ -113,6 +113,8 @@ def _call_tool(name, args):
         memories = ENGINE.retrieve(
             user_id, str(args.get("query", "")),
             budget_tokens=int(args.get("budget_tokens", 800)))
+        # tool delivery IS the use - the client agent receives the memories
+        ENGINE.commit_recall_usage(user_id, [m["id"] for m in memories])
         return _text_result({"memories": memories})
     if name == "engram_forget":
         ENGINE.forget(user_id, str(args.get("memory_id", "")))

@@ -85,6 +85,8 @@ def main():
     # reinforce the memories a judge is most likely to probe
     for q in RECALL_PROBES:
         got = eng.retrieve(UID, q)
+        # seeding counts as real use - reinforce so the constellation is alive
+        eng.commit_recall_usage(UID, [m["id"] for m in got])
         print("probe %-55r -> %d recalled" % (q[:52], len(got)))
 
     stats = eng.stats(UID)

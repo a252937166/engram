@@ -250,7 +250,8 @@ class Handler(BaseHTTPRequestHandler):
         if not ENGINE.session_belongs_to(user_id, session_id):
             return self._json(404, {"error": "not found"})
         ip = self._client_ip()
-        if _rate_limited(ip):
+        # offline fake mode exists for tests/CI - don't rate-limit ourselves
+        if _rate_limited(ip, limit=1000 if qwen_client.FAKE else 12):
             return self._json(429, {"error": "rate limit: wait a minute"})
         if ENGINE.usage_today() >= DAILY_CHAT_LIMIT:
             return self._json(429, {"error": "daily demo quota reached"})
@@ -299,6 +300,8 @@ class Handler(BaseHTTPRequestHandler):
             answer_msg_id = ENGINE.log_message(
                 session_id, user_id, "assistant", answer,
                 [m["id"] for m in recalled])
+            # the turn succeeded and is persisted - now recall counts as use
+            ENGINE.commit_recall_usage(user_id, [m["id"] for m in recalled])
 
             # 4) memory formation (visible phase in the UI)
             self._sse("phase", {"phase": "memorizing"})
