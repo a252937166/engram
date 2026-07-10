@@ -387,8 +387,31 @@ footer a:hover{color:#fff}
 #dockBar .dock-hint{font:400 10px/1 "JetBrains Mono",monospace;letter-spacing:.04em;color:#6f6590;margin-left:6px}
 #dockToggle{margin-left:auto;background:none;border:1px solid rgba(139,92,246,.35);color:#cabcf0;
   border-radius:7px;padding:2px 10px;cursor:pointer;font-size:12px}
-#dockBody{display:flex;flex-direction:column;height:34vh;min-height:250px;padding:0 14px 10px}
-#dockBody #log{flex:1;min-height:0;overflow-y:auto;padding-top:8px}
+#dockBody{display:flex;flex-direction:column;height:clamp(250px, var(--chat-h, 34vh), 78vh);padding:0 14px 10px;position:relative}
+#dockBody #log{flex:1;min-height:0;overflow-y:auto;padding-top:8px;position:relative}
+#dockGrip{height:7px;margin:-4px 0 -3px;cursor:ns-resize;flex:none;display:flex;align-items:center;justify-content:center}
+#dockGrip::before{content:'';width:52px;height:3px;border-radius:2px;background:rgba(139,92,246,.35)}
+#dockGrip:hover::before{background:rgba(139,92,246,.7)}
+#chatDock.focus{position:fixed;left:18px;right:18px;top:60px;bottom:34px;z-index:60;margin:0;
+  box-shadow:0 20px 80px rgba(0,0,0,.6)}
+#chatDock.focus #dockBody{height:auto;flex:1}
+#chatDock.focus #dockGrip{display:none}
+#dockBtns{margin-left:12px;display:flex;gap:6px}
+#dockBtns button{background:none;border:1px solid rgba(139,92,246,.35);color:#cabcf0;
+  border-radius:7px;padding:2px 10px;cursor:pointer;font-size:11px}
+#newMsgPill{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);display:none;
+  width:max-content;padding:5px 14px;border-radius:999px;border:1px solid rgba(232,67,147,.55);
+  background:rgba(24,8,38,.92);color:#ff8ab5;font:700 10px/1 "JetBrains Mono",monospace;
+  letter-spacing:.1em;cursor:pointer;z-index:5}
+#newMsgPill.show{display:block}
+.load-earlier{display:block;margin:2px auto 10px;padding:5px 16px;border-radius:999px;
+  border:1px solid rgba(139,92,246,.4);background:rgba(20,10,36,.8);color:#9d92c0;
+  font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.1em;cursor:pointer}
+.load-earlier:hover{color:#e6ddff;border-color:rgba(139,92,246,.8)}
+.audit-badge{display:inline-flex;gap:5px;align-items:center;margin-top:6px;padding:3px 9px;
+  border-radius:7px;border:1px solid rgba(139,92,246,.3);background:rgba(139,92,246,.08);
+  color:#8f86ab;font:600 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.06em;cursor:pointer}
+.audit-badge:hover{color:#e6ddff;border-color:rgba(232,67,147,.55)}
 #dockSess{margin-left:auto;display:flex;gap:8px;align-items:center}
 #dockSess select{max-width:190px;padding:4px 8px;font-size:11px}
 #dockSess .btn{padding:5px 12px;font-size:10px}
@@ -452,7 +475,7 @@ footer a:hover{color:#fff}
     <div class="h-spacer"></div>
     <div class="h-stat"><div class="v" id="hMem">0</div><div class="k">Active memories</div></div>
     <div class="h-stat"><div class="v" id="hSaved"><em>—</em></div><div class="k">Context saved</div></div>
-    <button class="btn" id="jdMini" title="Auto-play the 90-second judge tour">▶ Judge demo</button>
+    <button class="btn" id="jdMini" title="Auto-play the judge tour — ≈2 minutes, 5 live-verified checks">▶ Judge demo</button>
     <button class="btn" id="sleepBtn" title="Consolidate similar memories, prune weak ones">◐ Sleep cycle</button>
     <div class="badge"><span class="dot"></span> QWEN3.7-PLUS · QWEN CLOUD</div>
   </header>
@@ -555,10 +578,14 @@ footer a:hover{color:#fff}
   </main>
 
   <section id="chatDock">
+    <div id="dockGrip" title="Drag to resize the conversation"></div>
     <div id="dockBar"><span class="led"></span> QWEN CONVERSATION
       <span class="dock-hint">the input device — memory decisions happen above</span>
       <span id="dockSess"></span>
-      <button id="dockToggle" title="Collapse / expand">▾</button>
+      <span id="dockBtns">
+        <button id="dockFocus" title="Focus chat — fill the screen">⛶</button>
+        <button id="dockToggle" title="Collapse / expand">▾</button>
+      </span>
     </div>
     <div id="dockBody">
 
@@ -567,6 +594,7 @@ footer a:hover{color:#fff}
         <button class="btn primary" id="newSess">+ Session</button>
       </div>
       <div id="log"></div>
+      <button id="newMsgPill">↓ NEW RESPONSE</button>
       <div id="composer">
         <div id="inWrap">
           <textarea id="input" rows="1" placeholder="Talk to your agent — it remembers…"></textarea>
@@ -1024,16 +1052,56 @@ addEventListener('mousemove', ev=>{
 
 /* ================================================================ chat === */
 const log = $('#log'), input = $('#input');
+
+/* --- smart scrolling: follow only while the user is near the bottom --- */
+function nearBottom(){ return log.scrollHeight - log.scrollTop - log.clientHeight < 80; }
+function scrollLog(force){
+  if (force || nearBottom()){ log.scrollTop = log.scrollHeight; $('#newMsgPill').classList.remove('show'); }
+  else $('#newMsgPill').classList.add('show');
+}
+log.addEventListener('scroll', ()=>{ if (nearBottom()) $('#newMsgPill').classList.remove('show'); });
+$('#newMsgPill').addEventListener('click', ()=>scrollLog(true));
+
+/* --- chat dock: drag-resize (persisted) + focus mode --- */
+const dock = $('#chatDock');
+{
+  const saved = localStorage.getItem('engram_chat_h');
+  if (saved) document.documentElement.style.setProperty('--chat-h', saved);
+  let drag = null;
+  $('#dockGrip').addEventListener('mousedown', ev=>{
+    drag = {y: ev.clientY, h: $('#dockBody').getBoundingClientRect().height};
+    ev.preventDefault();
+  });
+  addEventListener('mousemove', ev=>{
+    if (!drag) return;
+    const h = Math.round(drag.h + (drag.y - ev.clientY));
+    document.documentElement.style.setProperty('--chat-h', h+'px');
+  });
+  addEventListener('mouseup', ()=>{
+    if (!drag) return;
+    drag = null;
+    localStorage.setItem('engram_chat_h',
+      getComputedStyle(document.documentElement).getPropertyValue('--chat-h').trim());
+  });
+  $('#dockFocus').addEventListener('click', ev=>{
+    ev.stopPropagation();
+    dock.classList.toggle('focus');
+    dock.classList.remove('min');
+    $('#dockFocus').textContent = dock.classList.contains('focus') ? '⤡' : '⛶';
+    scrollLog(true);
+  });
+}
+
 function addUser(text){
   const d = document.createElement('div'); d.className='msg user'; d.textContent=text;
-  log.appendChild(d); log.scrollTop=log.scrollHeight;
+  log.appendChild(d); scrollLog(true);
 }
 function addBot(){
   const d = document.createElement('div'); d.className='msg bot';
   d.innerHTML = '<div class="phases"><span class="ph on" data-p="recall">RECALL</span>'
     +'<span class="ph" data-p="reason">REASON</span><span class="ph" data-p="memorize">MEMORIZE</span></div>'
     +'<div class="recalls"></div><div class="bubble"><span class="caret"></span></div>';
-  log.appendChild(d); log.scrollTop=log.scrollHeight;
+  log.appendChild(d); scrollLog(true);
   return d;
 }
 function setPhase(el, p, doneList){
@@ -1185,7 +1253,7 @@ async function send(text){
         } else if (ev==='delta'){
           acc += d.text;
           bubble.innerHTML = md(acc)+'<span class="caret"></span>';
-          log.scrollTop = log.scrollHeight;
+          scrollLog();
         } else if (ev==='phase'){
           setPhase(bot,'memorize',['recall','reason']);
         } else if (ev==='memory_ops'){
@@ -1208,6 +1276,8 @@ async function send(text){
         } else if (ev==='done'){
           setPhase(bot,null,['recall','reason','memorize']);
           bubble.innerHTML = md(acc);
+          if (d.message_id && d.audit)
+            bot.insertAdjacentHTML('beforeend', auditBadgeHTML(d.message_id, d.audit));
           $('#quotaL').textContent = 'LAST: '+d.elapsed_ms+'MS · '+(d.usage.total_tokens||0)+' TK · '+d.recalled+' RECALLED';
           refresh();
         } else if (ev==='error'){
@@ -1292,19 +1362,61 @@ async function loadSessions(){
   await loadHistory();
   if (b.graph.nodes.some(n=>n.status==='active')) $('#hero').classList.add('gone');
 }
+function auditBadgeHTML(mid, a){
+  if (!a) return '';
+  return '<span class="audit-badge" data-mid="'+mid+'" title="Open this turn’s memory decision in the Inspector">◈ '
+    +a.recalled+' recalled · '+(a.spent??0)+'/'+(a.budget??800)+' tk'
+    +(a.ops ? ' · '+a.ops+' op'+(a.ops>1?'s':'') : '')+'</span>';
+}
+function historyMsgEl(m){
+  const d = document.createElement('div');
+  if (m.role==='user'){ d.className='msg user'; d.textContent = m.content; return d; }
+  d.className='msg bot';
+  d.innerHTML = '<div class="bubble">'+md(m.content)+'</div>'+auditBadgeHTML(m.id, m.audit);
+  return d;
+}
+let histCursor = null, histMore = false;
+function earlierBtn(){
+  let b = log.querySelector('.load-earlier');
+  if (histMore && !b){
+    b = document.createElement('button'); b.className='load-earlier';
+    b.textContent = '↑ LOAD EARLIER MESSAGES';
+    b.addEventListener('click', loadEarlier);
+    log.prepend(b);
+  } else if (!histMore && b) b.remove();
+}
 async function loadHistory(){
   log.innerHTML='';
-  const h = await api('/messages?session_id='+sessionId);
-  for (const m of h.messages){
-    if (m.role==='user') addUser(m.content);
-    else {
-      const d = document.createElement('div'); d.className='msg bot';
-      d.innerHTML = '<div class="bubble">'+md(m.content)+'</div>';
-      log.appendChild(d);
-    }
-  }
-  log.scrollTop = log.scrollHeight;
+  const h = await api('/messages?user_id='+userId+'&session_id='+sessionId+'&limit=50');
+  for (const m of h.messages) log.appendChild(historyMsgEl(m));
+  histCursor = h.next_cursor; histMore = h.has_more;
+  earlierBtn();
+  scrollLog(true);
 }
+async function loadEarlier(){
+  const prevH = log.scrollHeight;
+  const h = await api('/messages?user_id='+userId+'&session_id='+sessionId
+    +'&limit=50&before_id='+histCursor);
+  const btn = log.querySelector('.load-earlier');
+  const anchor = btn ? btn.nextSibling : log.firstChild;
+  for (const m of h.messages) log.insertBefore(historyMsgEl(m), anchor);
+  histCursor = h.next_cursor; histMore = h.has_more;
+  earlierBtn();
+  log.scrollTop += log.scrollHeight - prevH;   // keep the viewport anchored
+}
+/* a history badge replays that turn's frozen memory decision */
+log.addEventListener('click', async ev=>{
+  const b = ev.target.closest('.audit-badge'); if (!b) return;
+  try{
+    const a = await api('/turn_audit?user_id='+userId+'&message_id='+b.dataset.mid);
+    renderDecision({query: a.query, memories: a.selected, rejected: a.rejected,
+                    spent_tokens: a.spent_tokens, budget_tokens: a.budget_tokens});
+    renderOps(a.memory_ops);
+    feed('recalled', 'audit replayed — turn #'+b.dataset.mid+' ('+(a.model||'')+', '
+      +(a.elapsed_ms||0)+'ms)', '#c084fc');
+    if (innerWidth <= 1100) goTab('decision');
+  }catch(e){ feed('recalled', 'audit unavailable for turn #'+b.dataset.mid, '#8f86ab'); }
+});
 $('#sessSel').addEventListener('change', async ev=>{ sessionId=ev.target.value; await loadHistory(); });
 async function newSession(){
   PROOF.sessions++; PROOF.freshSession = true; renderProof();
@@ -1534,8 +1646,9 @@ function goTab(name){
   if (bar && sb){ bar.appendChild($('#sessSel')); bar.appendChild($('#newSess')); sb.remove(); }
 })();
 $('#dockBar').addEventListener('click', ev=>{
-  if (ev.target.closest('#dockSess')) return;      // interacting, not toggling
+  if (ev.target.closest('#dockSess') || ev.target.closest('#dockBtns')) return;
   $('#chatDock').classList.toggle('min');
+  $('#chatDock').classList.remove('focus');
   requestAnimationFrame(resize);
 });
 $('#input').addEventListener('focus', ()=>$('#chatDock').classList.remove('min'));
