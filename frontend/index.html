@@ -389,7 +389,7 @@ footer a:hover{color:#fff}
   border-radius:7px;padding:2px 10px;cursor:pointer;font-size:12px}
 #dockBody{display:flex;flex-direction:column;height:clamp(250px, var(--chat-h, 34vh), 78vh);padding:0 14px 10px;position:relative}
 #dockBody #log{flex:1;min-height:0;overflow-y:auto;padding-top:8px;position:relative}
-#dockGrip{height:7px;margin:-4px 0 -3px;cursor:ns-resize;flex:none;display:flex;align-items:center;justify-content:center}
+#dockGrip{height:12px;cursor:ns-resize;flex:none;display:flex;align-items:center;justify-content:center;touch-action:none}
 #dockGrip::before{content:'';width:52px;height:3px;border-radius:2px;background:rgba(139,92,246,.35)}
 #dockGrip:hover::before{background:rgba(139,92,246,.7)}
 #chatDock.focus{position:fixed;left:18px;right:18px;top:60px;bottom:34px;z-index:60;margin:0;
@@ -1105,9 +1105,21 @@ const log = $('#log'), input = $('#input');
 
 /* --- smart scrolling: follow only while the user is near the bottom --- */
 function nearBottom(){ return log.scrollHeight - log.scrollTop - log.clientHeight < 80; }
+function instantScroll(top){
+  // The CSS smooth behavior swallows programmatic scrolls (Chromium even
+  // ignores the scrollTo behavior:'auto' override here) - follow must be
+  // instant or rapid streaming deltas never actually reach the bottom.
+  // Only an inline-style override is reliable across engines.
+  const prev = log.style.scrollBehavior;
+  log.style.scrollBehavior = 'auto';
+  log.scrollTop = top;
+  log.style.scrollBehavior = prev;
+}
 function scrollLog(force){
-  if (force || nearBottom()){ log.scrollTop = log.scrollHeight; $('#newMsgPill').classList.remove('show'); }
-  else $('#newMsgPill').classList.add('show');
+  if (force || nearBottom()){
+    instantScroll(log.scrollHeight);
+    $('#newMsgPill').classList.remove('show');
+  } else $('#newMsgPill').classList.add('show');
 }
 log.addEventListener('scroll', ()=>{ if (nearBottom()) $('#newMsgPill').classList.remove('show'); });
 $('#newMsgPill').addEventListener('click', ()=>scrollLog(true));
@@ -1494,7 +1506,7 @@ async function loadEarlier(){
   for (const m of h.messages) log.insertBefore(historyMsgEl(m), anchor);
   histCursor = h.next_cursor; histMore = h.has_more;
   earlierBtn();
-  log.scrollTop += log.scrollHeight - prevH;   // keep the viewport anchored
+  instantScroll(log.scrollTop + (log.scrollHeight - prevH));  // keep the viewport anchored
 }
 /* a history badge replays that turn's frozen memory decision */
 log.addEventListener('click', async ev=>{
