@@ -11,7 +11,7 @@ zero stale-fact leakage.
 
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
 >
-> **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
+> **Try it:** https://engram.hackthon.site · **DevOps agent scenario:** https://engram.hackthon.site/?seed=devops
 > **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site · **Demo video (2:07, narrated):** https://youtu.be/teJQ3MEEFJY
 >
 > **One click on the live demo: ▶ RUN THE JUDGE DEMO (≈2 min, 5 live-verified checks)** — auto-plays teach →
@@ -146,7 +146,7 @@ https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 The full stack (nginx + systemd + SQLite + backend) is deployed on
 **Alibaba Cloud ECS instance `i-2zefhmpp3htrijv7plwr` (cn-beijing-c)** —
 live at https://engram.hackthon.site — with a
-global HTTPS mirror at https://engram.axiqo.xyz. All model inference (reasoning, extraction,
+public HTTPS ingress via nginx on the same ECS. All model inference (reasoning, extraction,
 arbitration, embeddings) runs on Qwen Cloud, so both the hosting and the AI
 backbone are Alibaba Cloud. Deployment proof video:
 https://youtu.be/DDso1eEqKTo
@@ -254,7 +254,7 @@ design, not an afterthought:
 - **Value** — cross-session personalization under a fixed token budget
   (context stays ~800 tokens while history grows unbounded); engine is
   embeddable via MCP in any agent stack; the
-  [DevOps seed](https://engram.axiqo.xyz/?seed=devops) shows the same engine
+  [DevOps seed](https://engram.hackthon.site/?seed=devops) shows the same engine
   as an ops-runbook memory (vertical, B2B).
 - **Docs** — this README + architecture diagram + reproducible evaluation
   ([docs/evaluation.md](docs/evaluation.md)) + one-shot deploy script +

@@ -8,7 +8,7 @@ Five ways to verify ENGRAM, fastest first.
 curl https://engram.hackthon.site/api/health   # Alibaba Cloud ECS, Beijing
 ```
 
-Open https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz).
+Open https://engram.hackthon.site (Alibaba Cloud ECS, Beijing).
 You land in the **Conversation Workbench** — left: persistent sessions,
 center: full-height Qwen conversation, right: live per-turn Memory
 Evidence (selected/rejected candidates, score waterfall, injected

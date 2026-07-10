@@ -23,7 +23,7 @@ the app is live.
 | Region / zone | `cn-beijing` / `cn-beijing-c` |
 | Public IP | `47.93.234.51` |
 | Stack | nginx (public HTTPS ingress) → systemd service `engram` → Python-stdlib backend on `127.0.0.1` → SQLite (WAL) |
-| Live app | https://engram.hackthon.site (global mirror: https://engram.axiqo.xyz) |
+| Live app | https://engram.hackthon.site |
 
 The application process deliberately binds only the loopback interface;
 nginx is the sole public entry point (TLS, rate limiting, static frontend).

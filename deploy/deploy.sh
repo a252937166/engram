@@ -3,7 +3,7 @@
 # Usage:  QWEN_API_KEY=sk-...  bash deploy/deploy.sh  [domain]
 set -euo pipefail
 
-DOMAIN="${1:-engram.axiqo.xyz}"
+DOMAIN="${1:-engram.hackthon.site}"
 APP=/opt/engram
 WEB=/var/www/engram
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,7 +28,7 @@ chmod 640 /etc/engram/engram.env
 
 cp "$SRC/deploy/engram.service" /etc/systemd/system/engram.service
 cp "$SRC/deploy/nginx-engram.conf" /etc/nginx/conf.d/engram.conf
-sed -i "s/engram\.axiqo\.xyz/${DOMAIN}/g" /etc/nginx/conf.d/engram.conf
+sed -i "s/engram\.hackthon\.site/${DOMAIN}/g" /etc/nginx/conf.d/engram.conf
 
 systemctl daemon-reload
 systemctl enable --now engram
