@@ -1071,6 +1071,9 @@ document.querySelectorAll('#sceneTabs a').forEach(a=>{
 function autosize(){ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,110)+'px'; }
 input.addEventListener('input', autosize);
 input.addEventListener('keydown', ev=>{
+  // IME composition: Enter confirms the candidate word, it must never send
+  // (isComposing for modern browsers, keyCode 229 for the long tail)
+  if (ev.isComposing || ev.keyCode === 229) return;
   if (ev.key==='Enter' && !ev.shiftKey){ ev.preventDefault(); send(input.value); }
 });
 $('#send').addEventListener('click', ()=>send(input.value));
