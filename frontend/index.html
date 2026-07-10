@@ -271,6 +271,35 @@ footer a:hover{color:#fff}
 @media (max-width:1180px){
   #inspector{display:none}
 }
+.scene-tabs{display:flex;gap:6px;margin-left:18px}
+.scene-tabs a{padding:6px 12px;border:1px solid rgba(167,139,250,.28);border-radius:999px;
+  font-size:10.5px;letter-spacing:.14em;color:#8f86ab;text-decoration:none;transition:.2s}
+.scene-tabs a.on{color:#e9defd;border-color:rgba(167,139,250,.75);background:rgba(139,92,246,.16)}
+.scene-tabs a.glow{animation:tabglow 1.2s ease-in-out infinite alternate}
+@keyframes tabglow{from{box-shadow:0 0 0 rgba(192,132,252,0)}to{box-shadow:0 0 14px rgba(192,132,252,.8)}}
+#jdBtn{pointer-events:auto;margin:2px 0 14px;padding:13px 26px;border-radius:14px;border:0;cursor:pointer;
+  font:700 14px/1 "JetBrains Mono",monospace;letter-spacing:.1em;color:#fff;
+  background:linear-gradient(90deg,#e84393,#a55eea);box-shadow:0 4px 26px rgba(165,94,234,.45)}
+#jdBtn:hover{filter:brightness(1.12)}
+#jdHint{color:#8f86ab;font-size:11.5px;margin-bottom:16px}
+#jdBar{display:none;position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:60;
+  align-items:center;gap:14px;padding:10px 18px;border-radius:12px;border:1px solid rgba(232,67,147,.5);
+  background:rgba(24,10,40,.92);backdrop-filter:blur(8px);font:600 12px/1.4 "JetBrains Mono",monospace;
+  color:#f3c9ff;max-width:92vw}
+#jdBar .stop{cursor:pointer;color:#8f86ab;border:1px solid #444;border-radius:8px;padding:3px 9px;background:none;font-size:11px}
+#njr{position:absolute;left:18px;top:14px;z-index:5;pointer-events:none;max-width:295px;
+  padding:12px 15px;border-radius:12px;border:1px solid rgba(167,139,250,.3);
+  background:rgba(16,8,30,.72);backdrop-filter:blur(4px)}
+#njr b{display:block;font-size:10.5px;letter-spacing:.16em;color:#c084fc;margin-bottom:7px}
+#njr span{display:block;font-size:11.5px;line-height:1.75;color:#b9aed6}
+@media (max-width:1180px){ #njr{display:none} }
+.rc{cursor:pointer}
+.rc .rsc{margin-right:4px}
+.mi.skel{color:#6f6590;border-left-color:#4a3f66!important;font-style:italic}
+.mi.skel .shim{display:block;height:8px;border-radius:5px;margin:7px 0;
+  background:linear-gradient(90deg,#241638 25%,#3a2a58 50%,#241638 75%);background-size:200% 100%;
+  animation:shim 1.4s linear infinite}
+@keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
 #narrowNote{display:none;margin:10px 10px 0;padding:9px 14px;border:1px solid rgba(167,139,250,.4);
   border-radius:10px;background:rgba(30,16,54,.72);color:#cabcf0;font-size:12.5px;line-height:1.55;
   letter-spacing:.02em}
@@ -289,6 +318,8 @@ footer a:hover{color:#fff}
 <canvas id="space"></canvas>
 <div id="tip"></div>
 
+<div id="jdBar"><span id="jdMsg">JUDGE DEMO</span><button class="stop" id="jdStop">stop</button></div>
+
 <div class="app">
   <header>
     <div class="logo">
@@ -298,9 +329,14 @@ footer a:hover{color:#fff}
         <small>NEURAL&nbsp;MEMORY&nbsp;ENGINE&nbsp;·&nbsp;TRACK&nbsp;1&nbsp;MEMORYAGENT</small>
       </div>
     </div>
+    <nav class="scene-tabs" id="sceneTabs">
+      <a href="./" data-s="" title="Personal-assistant memory scenario">PERSONAL</a>
+      <a href="./?seed=devops" data-s="devops" title="Production runbook memory for a DevOps agent">DEVOPS RUNBOOK</a>
+    </nav>
     <div class="h-spacer"></div>
     <div class="h-stat"><div class="v" id="hMem">0</div><div class="k">Active memories</div></div>
     <div class="h-stat"><div class="v" id="hSaved"><em>—</em></div><div class="k">Context saved</div></div>
+    <button class="btn" id="jdMini" title="Auto-play the 90-second judge tour">▶ Judge demo</button>
     <button class="btn" id="sleepBtn" title="Consolidate similar memories, prune weak ones">◐ Sleep cycle</button>
     <div class="badge"><span class="dot"></span> QWEN3.7-PLUS · QWEN CLOUD</div>
   </header>
@@ -332,11 +368,21 @@ footer a:hover{color:#fff}
         <h2>An agent that never<br>forgets who you are.</h2>
         <p>ENGRAM distills every conversation into durable memories — deduplicated, reinforced,
            superseded when you change, consolidated while it sleeps. Watch the constellation grow.</p>
+        <button id="jdBtn">▶ RUN 90-SECOND JUDGE DEMO</button>
+        <div id="jdHint">Auto-plays: teach → recall in a fresh session → belief revision → sleep-cycle consolidation.</div>
         <div class="sugg">
           <div class="sg" data-m="Hi! I'm Dora. I'm vegetarian, severely allergic to peanuts, and I work as a platform engineer at Acme migrating services to Kubernetes. I like answers short and in bullet points."><b>01 · TEACH</b>Introduce yourself — diet, work, style. Watch memories crystallize.</div>
           <div class="sg" data-m="What should I cook for dinner tonight?"><b>02 · RECALL</b>Ask for a recipe — it respects your allergies without being told.</div>
           <div class="sg" data-m="Update: I don't work at Acme anymore — I just joined Nova Robotics as head of infrastructure."><b>03 · EVOLVE</b>Change jobs. The old belief is superseded, not duplicated.</div>
         </div>
+      </div>
+      <div id="njr">
+        <b>NOT JUST CHAT / RAG</b>
+        <span>✓ Qwen distills chat into durable memories</span>
+        <span>✓ Hybrid recall — semantic + recency + importance + usage</span>
+        <span>✓ Arbiter supersedes stale facts, no contradictions</span>
+        <span>✓ Sleep cycle consolidates &amp; forgets</span>
+        <span>✓ Every recall is scored — hover / click a recall chip</span>
       </div>
       <div id="legend">
         <div class="lg" style="color:#ff2d78"><i style="background:#ff2d78"></i>preference</div>
@@ -361,7 +407,8 @@ footer a:hover{color:#fff}
         </div>
         <div>
           <div class="sec-t">Engram store</div>
-          <div id="memList"><div class="empty">// empty — teach me something</div></div>
+          <div id="memList"><div class="mi skel">seeded demo loading — diet · allergies · deploy rules · cluster facts…
+            <span class="shim"></span><span class="shim" style="width:72%"></span><span class="shim" style="width:84%"></span></div></div>
         </div>
       </div>
     </section>
@@ -761,9 +808,22 @@ function setPhase(el, p, doneList){
 }
 function chipHTML(m){
   const c = TYPE_COLOR[m.type]||'#999';
-  return '<span class="rc" data-id="'+m.id+'" style="color:'+c+';border-color:'+c+'55;background:'+c+'14">'
+  const comp = m.components || {};
+  const f = k => (comp[k] ?? 0).toFixed(2);
+  let tip = 'score '+m.score.toFixed(2)+'  =  0.55·semantic('+f('semantic')+') + 0.18·recency('+f('recency')
+    +') + 0.17·importance('+f('importance')+') + 0.10·usage('+f('usage')+')';
+  if (m.rescued) tip += '\n⛑ CRITICAL-MEMORY RESCUE: similarity below the normal floor, kept alive by importance ≥ 0.85';
+  return '<span class="rc" data-id="'+m.id+'" data-bd="'+esc(tip)+'" title="'+esc(tip)+'" '
+    +'style="color:'+c+';border-color:'+c+'55;background:'+c+'14">'
+    +(m.rescued?'<span class="rsc">⛑</span>':'')
     +'<span class="s">'+m.score.toFixed(2)+'</span>'+esc(m.content.length>44?m.content.slice(0,43)+'…':m.content)+'</span>';
 }
+/* clicking a recall chip prints its full score breakdown into the trace */
+document.addEventListener('click', ev=>{
+  const chip = ev.target.closest('.rc'); if (!chip || !chip.dataset.bd) return;
+  feed('recalled', chip.dataset.bd.replace(/\n/g,' — '), '#ffd166');
+  pulse(chip.dataset.id, 1);
+});
 function feed(kind, txt, color){
   const f = $('#feed');
   if (f.firstChild?.className==='empty') f.innerHTML='';
@@ -920,7 +980,7 @@ async function loadHistory(){
   log.scrollTop = log.scrollHeight;
 }
 $('#sessSel').addEventListener('change', async ev=>{ sessionId=ev.target.value; await loadHistory(); });
-$('#newSess').addEventListener('click', async ()=>{
+async function newSession(){
   const n = $('#sessSel').options.length+1;
   const s = await api('/sessions',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({user_id:userId, title:'Session '+n})});
@@ -930,10 +990,11 @@ $('#newSess').addEventListener('click', async ()=>{
   const d = document.createElement('div'); d.className='msg bot';
   d.innerHTML='<div class="bubble"><p><strong>New session — fresh context window.</strong> My short-term history is empty, but my long-term memory persists. Ask me what I remember about you.</p></div>';
   log.appendChild(d);
-});
+}
+$('#newSess').addEventListener('click', newSession);
 
 /* ============================================================== sleep ==== */
-$('#sleepBtn').addEventListener('click', async ()=>{
+async function runSleep(){
   const btn = $('#sleepBtn');
   btn.disabled = true; btn.textContent='◐ Sleeping…';
   try{
@@ -952,6 +1013,58 @@ $('#sleepBtn').addEventListener('click', async ()=>{
     setTimeout(refresh, 1400);
   }catch(e){ feed('consolidated','sleep failed: '+e.message,'#ff8888'); }
   btn.disabled=false; btn.textContent='◐ Sleep cycle';
+}
+$('#sleepBtn').addEventListener('click', runSleep);
+
+/* ==================================================== judge demo mode ==== */
+const JD = {run:false, stop:false};
+const jdSay = (i, n, label) => { $('#jdMsg').textContent = 'JUDGE DEMO · STEP '+i+'/'+n+' — '+label; };
+const jdPause = ms => new Promise(r=>setTimeout(r, ms));
+async function judgeDemo(){
+  if (JD.run || busy) return;
+  JD.run = true; JD.stop = false;
+  $('#jdBar').style.display='flex';
+  $('#hero').classList.add('gone');
+  const N = 6;
+  try{
+    jdSay(1,N,'Teaching durable facts — diet, allergy, employer, style');
+    await send("Hi! I'm Dora. I'm vegetarian, severely allergic to peanuts, and I work as a platform engineer at Acme migrating services to Kubernetes. I like answers short and in bullet points.");
+    if (JD.stop) return; await jdPause(1600);
+
+    jdSay(2,N,'New session — chat history wiped, long-term memory persists');
+    await newSession();
+    if (JD.stop) return; await jdPause(1200);
+
+    jdSay(3,N,'Cross-session recall — the allergy is honored, never re-told');
+    await send("What should I cook for dinner tonight?");
+    if (JD.stop) return; await jdPause(1600);
+
+    jdSay(4,N,'Belief revision — Acme must be superseded, not duplicated');
+    await send("Update: I don't work at Acme anymore — I just joined Nova Robotics as head of infrastructure.");
+    if (JD.stop) return; await jdPause(1600);
+
+    jdSay(5,N,'Fresh session — where do I work now?');
+    await newSession();
+    await send("Quick check: where do I work now, and what must you never cook for me?");
+    if (JD.stop) return; await jdPause(1600);
+
+    jdSay(6,N,'Sleep cycle — consolidate clusters, forget weak traces');
+    await runSleep();
+    await jdPause(1800);
+
+    $('#jdMsg').textContent = '✓ JUDGE DEMO COMPLETE — now try the DEVOPS RUNBOOK tab (production-agent memory) ↗';
+    const dv = document.querySelector('#sceneTabs a[data-s="devops"]');
+    if (dv) dv.classList.add('glow');
+    setTimeout(()=>{ $('#jdBar').style.display='none'; }, 12000);
+  } finally { JD.run = false; }
+}
+$('#jdBtn')?.addEventListener('click', judgeDemo);
+$('#jdMini').addEventListener('click', judgeDemo);
+$('#jdStop').addEventListener('click', ()=>{ JD.stop = true; $('#jdBar').style.display='none'; });
+
+/* scene tab highlight */
+document.querySelectorAll('#sceneTabs a').forEach(a=>{
+  if ((a.dataset.s||'') === SEED) a.classList.add('on');
 });
 
 /* ================================================================ misc === */

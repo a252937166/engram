@@ -12,6 +12,11 @@ zero stale-fact leakage.
 > **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
 > **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site (direct IP: http://47.93.234.51:8080) · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
 >
+> **One click on the live demo: ▶ RUN 90-SECOND JUDGE DEMO** — auto-plays teach →
+> cross-session recall → belief revision (supersede) → sleep-cycle consolidation.
+> Hover any recall chip for its weighted score breakdown; switch scenarios with the
+> PERSONAL / DEVOPS RUNBOOK tabs.
+>
 > Judges: [**JUDGING.md**](JUDGING.md) is a 5-step verification path (10 s → 10 min) ·
 > [**docs/proof-of-deployment.md**](docs/proof-of-deployment.md) proves the Alibaba Cloud runtime (ECS `i-2zefhmpp3htrijv7plwr`, cn-beijing-c).
 > Domain https://engram.hackthon.site is live over HTTPS — ICP filing 蜀ICP备2026037600号-1 approved.

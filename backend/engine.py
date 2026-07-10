@@ -285,6 +285,9 @@ class MemoryEngine(object):
                     "content": m["content"],
                     "score": round(score, 4),
                     "components": comp,
+                    # recalled below the normal floor => the critical-memory
+                    # rescue kept it alive (safety-grade importance)
+                    "rescued": comp["semantic"] < SEMANTIC_FLOOR,
                     "strength": m["strength"],
                     "tokens": cost,
                 }
