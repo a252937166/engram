@@ -284,14 +284,24 @@ class Handler(BaseHTTPRequestHandler):
                 "- [{}] {}".format(m["type"], m["content"]) for m in recalled
             ) or "(no relevant memories yet)"
             sys_prompt = SYSTEM_PROMPT.format(memory_block=memory_block)
-            if policy and policy["decision"] == "deny":
+            if policy and policy["decision"] != "allow":
+                directives = {
+                    "deny": "DENIED. Do not provide instructions to perform "
+                            "it. State that it is blocked by a standing "
+                            "rule, cite the rule, and offer the compliant "
+                            "alternative.",
+                    "require_approval": "GATED ON APPROVAL. Do not provide "
+                            "execution steps yet - state who must approve "
+                            "first, citing the rule.",
+                    "allow_with_preconditions": "GATED ON PRECONDITIONS. "
+                            "Spell out the required steps from the rule "
+                            "before any execution guidance.",
+                }
                 sys_prompt += (
                     "\n\nPOLICY GATE (server-enforced, non-negotiable): the "
                     "user's proposed action '" + policy["action"] + "' is "
-                    "DENIED by this standing rule: \"" + policy["rule"] +
-                    "\". Do not provide instructions to perform it. State "
-                    "that the action is blocked by a standing rule, cite the "
-                    "rule, and offer the compliant alternative.")
+                    + directives[policy["decision"]]
+                    + " Standing rule: \"" + policy["rule"] + "\"")
             messages = [{"role": "system", "content": sys_prompt}]
             for h in history:
                 messages.append({"role": h["role"], "content": h["content"][:2000]})

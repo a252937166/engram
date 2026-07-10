@@ -24,6 +24,8 @@ jobs:
         run: ENGRAM_FAKE_QWEN=1 python3 tests/test_belief_revision.py
       - name: Sleep cluster purity
         run: ENGRAM_FAKE_QWEN=1 python3 tests/test_sleep_cluster_purity.py
+      - name: Policy gate precision (20 cases)
+        run: ENGRAM_FAKE_QWEN=1 python3 eval/run_policy_eval.py
 
   e2e:
     runs-on: ubuntu-latest

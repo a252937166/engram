@@ -427,6 +427,11 @@ footer a:hover{color:#fff}
 .policy-gate b{display:block;font:700 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.12em;color:#ff8ab5;margin-bottom:6px}
 .policy-gate code{color:#ffd9ef}
 .policy-gate .pg-src{font:600 9.5px/1.6 "JetBrains Mono",monospace;color:#8f86ab}
+.policy-gate .pg-why{font-size:11px;color:#c9b8d8;margin-top:3px}
+.policy-gate .pg-alt{font-size:11px;color:#8fe6c3;margin-top:3px}
+.policy-gate.warn{border-color:rgba(245,166,35,.55);background:rgba(245,166,35,.06)}
+.policy-gate.warn b{color:#f5c76a}
+body.mode-chat #sleepBtn{display:none}
 #copyAudit{float:right;margin:-2px 0 6px;padding:4px 10px;border-radius:7px;border:1px solid rgba(139,92,246,.35);
   background:none;color:#9d92c0;cursor:pointer;font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.08em}
 #copyAudit:hover{color:#e6ddff}
@@ -610,9 +615,8 @@ body.graph-open #workspace{background:transparent}
     <div class="badge"><span class="dot"></span> QWEN3.7-PLUS · QWEN CLOUD</div>
   </header>
 
-  <div id="narrowNote">⟷ <b>This window is too narrow for the full demo.</b> Widen it (or use a
-  larger screen) to see the live memory constellation and the memory inspector — the
-  heart of ENGRAM. Chat still works below.</div>
+  <div id="narrowNote">⟷ <b>Compact layout active.</b> Use the GRAPH / DECISION / TIMELINE / CHAT
+  tabs to inspect each layer of the lab on this screen size.</div>
 
   <div id="proofBar">
     <div class="pc" id="pcPersist"><b>—</b><span>PERSISTENCE<br>cross-session recall</span></div>
@@ -1541,9 +1545,9 @@ async function send(text){
             for (const m of d.memories){ setTimeout(()=>pulse(m.id, m.score), dl+=140); feed('recalled', m.content, '#ffd166'); }
           }
         } else if (ev==='policy'){
-          if (d.decision === 'deny'){
+          if (d.decision && d.decision !== 'allow'){
             bot.insertAdjacentHTML('afterbegin', policyGateHTML(d));
-            feed('recalled', 'policy gate: '+d.action+' DENIED by standing rule', '#ff8ab5');
+            feed('recalled', 'policy gate: '+d.action+' → '+d.decision.replace(/_/g,' '), '#ff8ab5');
           }
         } else if (ev==='delta'){
           acc += d.text;
@@ -1676,12 +1680,22 @@ async function loadSessions(){
   if (b.graph.nodes.some(n=>n.status==='active')) $('#hero').classList.add('gone');
 }
 function policyGateHTML(p){
-  return '<div class="policy-gate"><b>ACTION DENIED — SERVER-SIDE POLICY GATE</b>'
-    +'<div class="pg-act">proposed: <code>'+esc(p.action)+'(…)</code></div>'
-    +'<div class="pg-rule">standing rule: '+esc((p.rule||'').slice(0,120))+'</div>'
-    +'<div class="pg-src">decision source: procedural memory · score '
-    +((p.retrieval_score??0).toFixed ? (p.retrieval_score??0).toFixed(2) : p.retrieval_score)
-    +' · '+esc(p.enforcement||'')+'</div></div>';
+  const heads = {deny:'POLICY DECISION — DENIED',
+    require_approval:'POLICY DECISION — APPROVAL REQUIRED',
+    allow_with_preconditions:'POLICY DECISION — PRECONDITIONS REQUIRED'};
+  const tc = p.proposed_tool_call || {};
+  const args = tc.arguments ? esc(tc.arguments.target||'') : '';
+  return '<div class="policy-gate'+(p.decision!=='deny'?' warn':'')+'">'
+    +'<b>'+(heads[p.decision]||'POLICY DECISION')+'</b>'
+    +'<div class="pg-act">proposed tool call: <code>'+esc(tc.tool||p.action)+'("'+args+'")</code>'
+    +' · dry-run</div>'
+    +'<div class="pg-rule">matched procedural memory: '+esc((p.rule||'').slice(0,140))+'</div>'
+    +'<div class="pg-why">why it matched — action: <code>'+esc(p.action)+'</code>'
+    +(p.resource&&p.resource.length?' · resource: <code>'+esc(p.resource.join(' '))+'</code>':'')
+    +' · recall score '+((p.retrieval_score??0).toFixed?(p.retrieval_score??0).toFixed(2):p.retrieval_score)+'</div>'
+    +(p.precondition?'<div class="pg-alt">compliant path: '+esc(p.precondition)+' first</div>':'')
+    +'<div class="pg-src">enforcement: '+esc(p.enforcement||'')
+    +' · dispatch: <code>executed=false</code></div></div>';
 }
 function auditBadgeHTML(mid, a, extra){
   if (!a) return '';
@@ -1762,7 +1776,7 @@ log.addEventListener('click', async ev=>{
     renderDecision({query: a.query, memories: a.selected, rejected: a.rejected,
                     spent_tokens: a.spent_tokens, budget_tokens: a.budget_tokens});
     renderOps(a.memory_ops);
-    if (a.policy && a.policy.decision === 'deny'){
+    if (a.policy && a.policy.decision && a.policy.decision !== 'allow'){
       dShow('#dOpW');
       $('#dOp').insertAdjacentHTML('afterbegin', policyGateHTML(a.policy));
     }

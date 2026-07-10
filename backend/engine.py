@@ -360,47 +360,121 @@ class MemoryEngine(object):
                     "spent_tokens": spent}
         return picked
 
-    # Risky-action verbs a standing procedural rule can veto.
-    _ACTION_RE = re.compile(
-        r"\b(restart|reboot|delete|drop|roll\s?back|scale\s+(?:down|up)|"
-        r"shut\s?down|kill|terminate|redeploy|force[- ]push|truncate)\b", re.I)
-    _RULE_RE = re.compile(
-        r"\b(never|must not|do not|don't|forbid|prohibit|always)\b", re.I)
+    # ---- action-aware policy layer -------------------------------------
+    # Verb families: a query action only matches a rule about the SAME action.
+    _ACTION_FAMILIES = {
+        "restart": r"restart|reboot|bounce|recycle|cycle",
+        "delete": r"delete|drop|remove|truncate|wipe|purge",
+        "rollback": r"roll\s?back|revert",
+        "scale": r"scale\s+(?:down|up)|downscale|upscale",
+        "shutdown": r"shut\s?down|power\s?off|stop\b|kill|terminate",
+        "deploy": r"redeploy|deploy|force[- ]push|push\s+to\s+prod",
+    }
+    _NEG_RE = re.compile(r"\b(?:not|n't|never|don't|do not|avoid|without)\s+(?:\w+\s+){0,2}$", re.I)
+    _ASK_ABOUT_RE = re.compile(r"\b(?:why|what|explain|how come|meaning of)\b", re.I)
+    _APPROVAL_RE = re.compile(r"\b(?:approval|approved|sign[- ]?off|incident commander|on[- ]?call lead)\b", re.I)
+    _PROHIBIT_RE = re.compile(r"\b(?:never|must not|do not|don't|forbid(?:den)?|prohibit(?:ed)?)\b", re.I)
+    _PRECOND_RE = re.compile(r"\balways\s+(.{4,80}?)\s+(?:first|before)\b", re.I)
+
+    @classmethod
+    def _extract_action(cls, text, as_request=False):
+        """(action_family, resource_words) from free text, or (None, ...).
+
+        as_request=True applies request semantics: a negated or purely
+        explanatory mention ("do not restart", "why is restart risky")
+        is NOT a proposed action.
+        """
+        for fam, pat in cls._ACTION_FAMILIES.items():
+            m = re.search(r"\b(?:%s)\b" % pat, text, re.I)
+            if not m:
+                continue
+            if as_request:
+                if cls._NEG_RE.search(text[:m.start()]):
+                    continue
+                if cls._ASK_ABOUT_RE.search(text) and "?" not in text[m.end():m.end() + 40]:
+                    continue
+            tail = re.findall(r"[a-z][a-z-]{2,}",
+                              text[m.end():m.end() + 60].lower())
+            stop = {"the", "a", "an", "my", "our", "this", "that", "right",
+                    "now", "please", "directly", "immediately", "it", "them"}
+            resource = [w for w in tail if w not in stop][:4]
+            return fam, set(resource)
+        return None, set()
 
     def evaluate_policy(self, query, recalled):
-        """Server-side policy decision for this turn.
+        """Server-side, action-aware policy decision - BEFORE generation.
 
-        If the user proposes a risky action and a recalled *procedural*
-        memory states a standing prohibition, the gate denies before any
-        generation or tool dispatch. The verdict is injected into the
-        prompt, persisted in the turn audit, and returned to the UI - the
-        display renders the server decision, it never invents one.
+        A recalled procedural rule participates only if it constrains the
+        SAME action family as the user's request, and (when both sides name
+        one) a compatible resource. Verdicts: deny / require_approval /
+        allow_with_preconditions / allow. Deterministic authority path -
+        Qwen never decides the verdict.
         """
-        act = self._ACTION_RE.search(query or "")
-        if not act:
+        q_act, q_res = self._extract_action(query or "", as_request=True)
+        if not q_act:
             return None
+        best = None
+        rank = {"deny": 3, "require_approval": 2, "allow_with_preconditions": 1}
         for m in recalled:
             if m.get("type") != "procedural":
                 continue
-            if not self._RULE_RE.search(m.get("content", "")):
-                continue
-            return {
-                "decision": "deny",
-                "action": act.group(0).lower(),
+            content = m.get("content", "")
+            r_act, r_res = self._extract_action(content)
+            if r_act != q_act:
+                continue                       # rule is about another action
+            if r_res and q_res and not (r_res & q_res):
+                continue                       # rule scopes another resource
+            pre = self._PRECOND_RE.search(content)
+            if self._PROHIBIT_RE.search(content):
+                effect = "deny"
+            elif self._APPROVAL_RE.search(content):
+                effect = "require_approval"
+            elif pre:
+                effect = "allow_with_preconditions"
+            else:
+                continue                       # descriptive, not a constraint
+            verdict = {
+                "decision": effect,
+                "action": q_act,
+                "resource": sorted(q_res & r_res) or sorted(r_res)[:3],
                 "rule_memory_id": m["id"],
-                "rule": m["content"],
+                "rule": content,
                 "retrieval_score": m.get("score"),
-                "reason": "A standing procedural memory prohibits the "
-                          "proposed action.",
-                "enforcement": "server-side gate: verdict injected into the "
-                               "prompt and tool dispatch suppressed for "
-                               "this turn",
+                "precondition": pre.group(1).strip() if pre else None,
+                "reason": {
+                    "deny": "A standing procedural memory prohibits this "
+                            "action on this resource.",
+                    "require_approval": "A standing procedural memory "
+                            "requires approval before this action.",
+                    "allow_with_preconditions": "A standing procedural "
+                            "memory requires steps before this action.",
+                }[effect],
+                "enforcement": "server-side pre-generation gate: verdict "
+                               "computed before Qwen generation; the "
+                               "proposed tool call was not dispatched",
             }
+            if best is None or rank.get(effect, 0) > rank.get(best["decision"], 0):
+                best = verdict
+        if best:
+            best["proposed_tool_call"] = {
+                "tool": q_act + "_resource", "dry_run": True,
+                "arguments": {"target": " ".join(sorted(q_res)[:3]) or "unspecified"},
+            }
+            best["dispatch"] = {"executed": False,
+                                "reason": "blocked by policy verdict '%s' "
+                                          "before dispatch" % best["decision"]}
+            return best
         return {
             "decision": "allow",
-            "action": act.group(0).lower(),
-            "reason": "No standing procedural rule matches the proposed "
-                      "action.",
+            "action": q_act,
+            "reason": "No standing procedural rule constrains this action.",
+            "proposed_tool_call": {
+                "tool": q_act + "_resource", "dry_run": True,
+                "arguments": {"target": " ".join(sorted(q_res)[:3]) or "unspecified"},
+            },
+            "dispatch": {"executed": False,
+                         "reason": "dry-run sandbox - no live executor is "
+                                   "attached in the demo deployment"},
         }
 
     def commit_recall_usage(self, user_id, memory_ids):

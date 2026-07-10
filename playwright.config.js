@@ -28,7 +28,7 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'python3 backend/server.py',
+    command: 'rm -f e2e-tmp.db e2e-tmp.db-wal e2e-tmp.db-shm && python3 backend/server.py',
     port: 8788,
     reuseExistingServer: false,
     env: {

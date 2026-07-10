@@ -1,8 +1,9 @@
-# ENGRAM — a neural long-term memory engine for Qwen agents
+# ENGRAM — a verifiable memory control plane for Qwen agents
 
-**A memory that behaves like memory: it recalls under a fixed token budget,
-revises beliefs instead of piling up contradictions, consolidates while it
-"sleeps", and shows you every decision it makes.** Across reproducible
+**RAG retrieves documents. ENGRAM governs an agent's evolving beliefs and
+actions: it recalls under a fixed token budget, revises beliefs instead of
+piling up contradictions, consolidates while it "sleeps", denies unsafe
+actions before generation, and replays every decision it makes.** Across reproducible
 runs on the same Qwen model: **5/5 scenarios**, 2.6–2.8× smaller prompts
 than full-history stuffing, a memory store 94–95% smaller than raw
 history, critical recall succeeding at semantic similarity 0.25–0.31, and

@@ -178,8 +178,9 @@ test.describe('conversation workbench (default)', () => {
     await input.press('Enter');
     const gate = page.locator('.policy-gate').last();
     await expect(gate).toBeVisible({ timeout: 30000 });
-    await expect(gate).toContainText('ACTION DENIED');
-    await expect(gate).toContainText('server-side gate');
+    await expect(gate).toContainText('POLICY DECISION — DENIED');
+    await expect(gate).toContainText('executed=false');
+    await expect(gate).toContainText('compliant path');
     // the verdict is persisted in the turn audit
     const badge = page.locator('.msg.bot').last().locator('.audit-badge');
     await expect(badge).toBeVisible({ timeout: 30000 });
