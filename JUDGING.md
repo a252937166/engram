@@ -36,7 +36,7 @@ python3 backend/server.py         # http://127.0.0.1:8788
 
 No pip install — pure Python 3.6+ stdlib.
 
-## 3. Reproduce the benchmark (10 minutes, ~50k tokens)
+## 3. Reproduce the benchmark (≈4 minutes, ≈25k tokens measured)
 
 ```bash
 python3 eval/run_eval.py --base http://127.0.0.1:8788

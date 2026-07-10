@@ -12,7 +12,7 @@ zero stale-fact leakage.
 > **Try it (HTTPS, loads worldwide):** https://engram.axiqo.xyz · **DevOps agent scenario:** https://engram.axiqo.xyz/?seed=devops
 > **Origin (Alibaba Cloud ECS, Beijing):** https://engram.hackthon.site (direct IP: http://47.93.234.51:8080) · **Demo video (2:42, narrated):** https://youtu.be/yfjW6hGBj9s
 >
-> **One click on the live demo: ▶ RUN 90-SECOND JUDGE DEMO** — auto-plays teach →
+> **One click on the live demo: ▶ RUN THE JUDGE DEMO (≈2 min, 5 live-verified checks)** — auto-plays teach →
 > cross-session recall → belief revision (supersede) → sleep-cycle consolidation.
 > Hover any recall chip for its weighted score breakdown; switch scenarios with the
 > PERSONAL / DEVOPS RUNBOOK tabs.
@@ -42,7 +42,7 @@ into dense semantic knowledge, and stale traces are forgotten.
 | Append full chat history to context | **~800-token memory budget**, greedy-packed from scored memories |
 | Similarity-only retrieval | Hybrid score: `0.55·semantic + 0.18·recency + 0.17·importance + 0.10·usage`, with per-type half-lives and a rescue floor for safety-critical memories (allergies surface even at low similarity) |
 | Contradictions pile up | **LLM arbitration**: embeddings shortlist neighbors, `qwen3.6-flash` rules *duplicate / replaces / distinct* — changed jobs supersede, a diet and an allergy coexist |
-| Store grows forever | **Sleep cycle**: union-find clustering (cos ≥ .80) merges fragments into semantic summaries; retention `0.5·importance + 0.3·usage + 0.2·recency` below floor ⇒ forgotten |
+| Store grows forever | **Sleep cycle**: union-find clustering (configurable threshold, production default cos ≥ .55, calibrated on text-embedding-v4) merges fragments into semantic summaries; retention `0.5·importance + 0.3·usage + 0.2·recency` below floor ⇒ forgotten |
 | Memory is a black box | Every recall streams its **score components** to the UI; every memory keeps an audit trail (`superseded_by`, `consolidated_into`, access counts) |
 
 ## Measured, not claimed
@@ -199,7 +199,9 @@ Tools: `engram_remember` · `engram_recall` · `engram_forget` ·
 | `GET /api/memories?user_id=` | full memory graph: nodes + similarity links |
 | `POST /api/sleep` | run consolidation + forgetting, returns the report |
 | `POST /api/forget` | explicit right-to-be-forgotten for one memory |
-| `GET /api/bootstrap` · `/api/stats` · `/api/messages` · `POST /api/sessions` | app plumbing |
+| `GET /api/messages?user_id&session_id[&before_id&limit]` | cursor-paginated history; session ownership enforced (404 across users) |
+| `GET /api/turn_audit?user_id&message_id` | the frozen memory decision of one past turn (selected/rejected/context/ops) |
+| `GET /api/bootstrap` · `/api/stats` · `POST /api/sessions` | app plumbing |
 
 ## Privacy & data governance
 
@@ -207,8 +209,10 @@ A memory engine holds durable personal facts, so governance is part of the
 design, not an afterthought:
 
 - **Per-user isolation** — every query is scoped by `user_id` at the SQL
-  layer; there is no cross-user retrieval path. Demo visitors get a random
-  anonymous id (no account, no tracking).
+  layer, and session-scoped endpoints verify session ownership first
+  (a foreign `session_id` 404s: enforced in code, asserted in
+  `tests/test_session_isolation.py` on every CI push). Demo visitors get a
+  random anonymous id (no account, no tracking).
 - **Right to be forgotten** — `POST /api/forget` (and the ✕ on any node in
   the UI) tombstones a memory immediately; it can never be retrieved again.
   Forgetting is also *automatic*: low-retention traces decay out during
@@ -216,8 +220,11 @@ design, not an afterthought:
 - **Corrections don't linger** — superseded beliefs are structurally
   excluded from retrieval, so an outdated address or diet cannot resurface.
 - **Auditability** — every memory carries its provenance (`superseded_by`,
-  `consolidated_into`, access counts, timestamps); the UI streams the exact
-  score components behind each recall. Nothing the engine does is invisible.
+  `consolidated_into`, access counts, timestamps), and every chat turn
+  freezes its full memory decision (selected + rejected candidates, score
+  components, the exact context handed to Qwen, resulting ops) into a
+  per-turn audit — replayable from chat history via the Decision Inspector.
+  Nothing the engine does is invisible.
 - **Key & data custody** — the Qwen API key lives only in
   `/etc/engram/engram.env` on the server (never in the repo or the
   browser); memories live in a local SQLite file on the ECS, sent nowhere
