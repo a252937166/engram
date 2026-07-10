@@ -8,7 +8,11 @@ Endpoints
   GET  /api/health                      liveness + model info
   GET  /api/bootstrap?user_id=..        sessions + memory graph + stats
   POST /api/sessions                    {user_id, title} -> {id}
-  GET  /api/messages?session_id=..      chat history of one session
+  GET  /api/messages?user_id=..&session_id=..[&before_id=..&limit=..]
+                                        one page of history (cursor pagination);
+                                        session ownership enforced
+  GET  /api/turn_audit?user_id=..&message_id=..
+                                        frozen memory decision of one turn
   POST /api/chat                        {user_id, session_id, message} -> SSE
   GET  /api/memories?user_id=..         memory graph (nodes + links)
   POST /api/sleep                       {user_id} -> consolidation report
@@ -171,9 +175,30 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, ENGINE.stats(user_id))
             if route == "/api/messages":
                 sid = query.get("session_id", "")
+                if not USER_RE.match(user_id):
+                    return self._json(400, {"error": "bad user_id"})
                 if not ID_RE.match(sid):
                     return self._json(400, {"error": "bad session_id"})
-                return self._json(200, {"messages": ENGINE.session_messages(sid)})
+                if not ENGINE.session_belongs_to(user_id, sid):
+                    return self._json(404, {"error": "not found"})
+                try:
+                    before_id = int(query["before_id"]) if "before_id" in query else None
+                    limit = int(query.get("limit", 50))
+                except ValueError:
+                    return self._json(400, {"error": "bad cursor"})
+                return self._json(200, ENGINE.session_messages(
+                    user_id, sid, before_id=before_id, limit=limit))
+            if route == "/api/turn_audit":
+                if not USER_RE.match(user_id):
+                    return self._json(400, {"error": "bad user_id"})
+                try:
+                    mid = int(query.get("message_id", ""))
+                except ValueError:
+                    return self._json(400, {"error": "bad message_id"})
+                audit = ENGINE.turn_audit(user_id, mid)
+                if not audit:
+                    return self._json(404, {"error": "not found"})
+                return self._json(200, audit)
             return self._serve_static(route)
         except Exception as err:  # noqa: broad, boundary of the process
             self.log_message("GET %s failed: %r", route, err)
@@ -222,6 +247,8 @@ class Handler(BaseHTTPRequestHandler):
         message = str(body.get("message", "")).strip()[:4000]
         if not USER_RE.match(user_id) or not ID_RE.match(session_id) or not message:
             return self._json(400, {"error": "bad request"})
+        if not ENGINE.session_belongs_to(user_id, session_id):
+            return self._json(404, {"error": "not found"})
         ip = self._client_ip()
         if _rate_limited(ip):
             return self._json(429, {"error": "rate limit: wait a minute"})
@@ -246,7 +273,8 @@ class Handler(BaseHTTPRequestHandler):
             # 2) short-term window: only the current session's recent turns.
             #    Long-term knowledge arrives through ENGRAM's memory block,
             #    which is what keeps the context small and cross-session.
-            history = ENGINE.session_messages(session_id, limit=8)
+            history = ENGINE.session_messages(
+                user_id, session_id, limit=8)["messages"]
             memory_block = "\n".join(
                 "- [{}] {}".format(m["type"], m["content"]) for m in recalled
             ) or "(no relevant memories yet)"
@@ -268,19 +296,31 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     usage = payload
             answer = "".join(answer_parts)
-            ENGINE.log_message(session_id, user_id, "assistant", answer,
-                               [m["id"] for m in recalled])
+            answer_msg_id = ENGINE.log_message(
+                session_id, user_id, "assistant", answer,
+                [m["id"] for m in recalled])
 
             # 4) memory formation (visible phase in the UI)
             self._sse("phase", {"phase": "memorizing"})
             ops = ENGINE.extract_and_remember(user_id, session_id, message)
             self._sse("memory_ops", {"ops": ops})
 
+            # 5) freeze this turn's memory decision for the audit log
+            elapsed_ms = int((time.time() - t0) * 1000)
+            ENGINE.log_turn_audit(
+                answer_msg_id, user_id, session_id, message, ret,
+                memory_block, ops, qwen_client.CHAT_MODEL, usage, elapsed_ms)
+
             ENGINE.count_chat(usage.get("total_tokens", 0))
             self._sse("done", {
                 "usage": usage,
                 "recalled": len(recalled),
-                "elapsed_ms": int((time.time() - t0) * 1000),
+                "message_id": answer_msg_id,
+                "audit": {"recalled": len(recalled),
+                          "spent": ret["spent_tokens"],
+                          "budget": ret["budget_tokens"],
+                          "ops": len(ops)},
+                "elapsed_ms": elapsed_ms,
                 "model": qwen_client.CHAT_MODEL,
             })
         except qwen_client.QwenError as err:

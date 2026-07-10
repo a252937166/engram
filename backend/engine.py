@@ -167,6 +167,7 @@ class MemoryEngine(object):
     def __init__(self, db_path):
         self._db = sqlite3.connect(db_path, check_same_thread=False)
         self._db.execute("PRAGMA journal_mode=WAL")
+        self._db.execute("PRAGMA foreign_keys=ON")
         self._lock = threading.RLock()
         self._init_schema()
 
@@ -213,6 +214,28 @@ class MemoryEngine(object):
                     chats INTEGER DEFAULT 0,
                     tokens INTEGER DEFAULT 0
                 );
+                CREATE INDEX IF NOT EXISTS idx_msg_session
+                    ON messages(session_id, id);
+                CREATE TABLE IF NOT EXISTS turn_audits(
+                    message_id INTEGER PRIMARY KEY
+                        REFERENCES messages(id) ON DELETE CASCADE,
+                    user_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    query TEXT,
+                    selected_json TEXT,
+                    rejected_json TEXT,
+                    memory_context TEXT,
+                    budget_tokens INTEGER,
+                    spent_tokens INTEGER,
+                    memory_ops_json TEXT,
+                    model TEXT,
+                    prompt_tokens INTEGER,
+                    completion_tokens INTEGER,
+                    elapsed_ms INTEGER,
+                    created_at REAL
+                );
+                CREATE INDEX IF NOT EXISTS idx_audit_session
+                    ON turn_audits(session_id);
                 """
             )
             self._db.commit()
@@ -746,21 +769,96 @@ class MemoryEngine(object):
             (user_id,),
         )
 
+    def session_belongs_to(self, user_id, session_id):
+        """Ownership gate: every session-scoped API call goes through this."""
+        rows = self._rows(
+            "SELECT 1 FROM sessions WHERE id=? AND user_id=?",
+            (session_id, user_id),
+        )
+        return bool(rows)
+
     def log_message(self, session_id, user_id, role, content, recalled_ids=None):
+        with self._lock:
+            cur = self._db.execute(
+                "INSERT INTO messages(session_id, user_id, role, content, "
+                "created_at, recalled_ids) VALUES(?,?,?,?,?,?)",
+                (session_id, user_id, role, content, _now(),
+                 json.dumps(recalled_ids or [])),
+            )
+            self._db.commit()
+            return cur.lastrowid
+
+    def session_messages(self, user_id, session_id, before_id=None, limit=50):
+        """One page of a session's history, oldest-first, user-scoped.
+
+        Cursor pagination: pass the previous page's `next_cursor` as
+        `before_id` to walk backwards. Each assistant row carries a compact
+        audit summary so history can open the Decision Inspector.
+        """
+        limit = max(1, min(int(limit), 100))
+        args = [session_id, user_id]
+        cond = "m.session_id=? AND m.user_id=?"
+        if before_id:
+            cond += " AND m.id<?"
+            args.append(int(before_id))
+        args.append(limit + 1)
+        rows = self._rows(
+            "SELECT m.id, m.role, m.content, m.created_at, m.recalled_ids, "
+            "a.spent_tokens AS audit_spent, a.budget_tokens AS audit_budget, "
+            "a.selected_json IS NOT NULL AS has_audit, a.memory_ops_json "
+            "FROM messages m LEFT JOIN turn_audits a ON a.message_id=m.id "
+            "WHERE " + cond + " ORDER BY m.id DESC LIMIT ?",
+            tuple(args),
+        )
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+        for r in rows:
+            ops = json.loads(r.pop("memory_ops_json") or "[]")
+            sel = json.loads(r["recalled_ids"] or "[]")
+            r["audit"] = {
+                "recalled": len(sel),
+                "spent": r.pop("audit_spent"),
+                "budget": r.pop("audit_budget"),
+                "ops": len(ops),
+            } if r.pop("has_audit") else None
+        rows = list(reversed(rows))
+        return {
+            "messages": rows,
+            "has_more": has_more,
+            "next_cursor": rows[0]["id"] if rows else None,
+        }
+
+    def log_turn_audit(self, message_id, user_id, session_id, query,
+                       retrieval, memory_context, ops, model, usage,
+                       elapsed_ms):
+        """Freeze this turn's full memory decision so history can replay it."""
         self._exec(
-            "INSERT INTO messages(session_id, user_id, role, content, created_at, "
-            "recalled_ids) VALUES(?,?,?,?,?,?)",
-            (session_id, user_id, role, content, _now(),
-             json.dumps(recalled_ids or [])),
+            "INSERT OR REPLACE INTO turn_audits(message_id, user_id, "
+            "session_id, query, selected_json, rejected_json, memory_context, "
+            "budget_tokens, spent_tokens, memory_ops_json, model, "
+            "prompt_tokens, completion_tokens, elapsed_ms, created_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (message_id, user_id, session_id, query[:2000],
+             json.dumps(retrieval.get("picked", []), ensure_ascii=False),
+             json.dumps(retrieval.get("rejected", []), ensure_ascii=False),
+             memory_context[:8000],
+             retrieval.get("budget_tokens"), retrieval.get("spent_tokens"),
+             json.dumps(ops or [], ensure_ascii=False), model,
+             usage.get("prompt_tokens"), usage.get("completion_tokens"),
+             elapsed_ms, _now()),
         )
 
-    def session_messages(self, session_id, limit=40):
+    def turn_audit(self, user_id, message_id):
         rows = self._rows(
-            "SELECT role, content, created_at, recalled_ids FROM messages "
-            "WHERE session_id=? ORDER BY id DESC LIMIT ?",
-            (session_id, limit),
+            "SELECT * FROM turn_audits WHERE message_id=? AND user_id=?",
+            (int(message_id), user_id),
         )
-        return list(reversed(rows))
+        if not rows:
+            return None
+        a = rows[0]
+        for k in ("selected_json", "rejected_json", "memory_ops_json"):
+            a[k.replace("_json", "")] = json.loads(a.pop(k) or "[]")
+        return a
 
     # -------------------------------------------------------------- quota ---
     def usage_today(self):
