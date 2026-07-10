@@ -4,7 +4,14 @@
 const { test, expect } = require('@playwright/test');
 
 test('tabs layout: chat is usable, engine panes reachable', async ({ page }) => {
+  // narrow viewports: the workbench collapses to a single conversation
+  // column; the lab keeps its tab layout
   await page.goto('/');
+  await expect(page.locator('#wsConv')).toBeVisible();
+  const inputWb = page.getByPlaceholder('Talk to your agent');
+  await expect(inputWb).toBeVisible();
+
+  await page.locator('#modeSwitch button[data-mode="lab"]').click();
   await expect(page.locator('#tabBar')).toBeVisible();
 
   // chat tab: full-height dock, send a message end-to-end

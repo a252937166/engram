@@ -2,9 +2,10 @@
 
 **A memory that behaves like memory: it recalls under a fixed token budget,
 revises beliefs instead of piling up contradictions, consolidates while it
-"sleeps", and shows you every decision it makes.** Measured against
-baselines on the same Qwen model: 5/5 scenarios, 2.8× smaller prompts than
-full-history stuffing, a memory store 94% smaller than raw history, and
+"sleeps", and shows you every decision it makes.** Across reproducible
+runs on the same Qwen model: **5/5 scenarios**, 2.6–2.8× smaller prompts
+than full-history stuffing, a memory store 94–95% smaller than raw
+history, critical recall succeeding at semantic similarity 0.25–0.31, and
 zero stale-fact leakage.
 
 > **Global AI Hackathon Series with Qwen Cloud · Track 1: MemoryAgent**
@@ -59,7 +60,7 @@ fields. **5/5 scenarios pass:**
 | Timely forgetting of outdated info | Employer change fires a supersede op; **zero stale-fact leakage** in a fresh session (structural, not prompt luck) |
 | Efficient storage | After 32 messages: whole store = **48 tk vs 849 tk** of raw history (94% smaller), and it *shrinks* under consolidation |
 | Consolidation | Sleep cycle merges 3 Tokyo fragments → 1 dense memory; store 98 → 74 tk |
-| Critical recall in a limited window | Peanut allergy surfaces at **cosine 0.31** (below the normal floor) via the importance rescue floor |
+| Critical recall in a limited window | Peanut allergy surfaces at **cosine 0.25–0.31 across runs** (below the normal floor) via the importance rescue floor |
 
 ## How ENGRAM differs from generic memory layers
 

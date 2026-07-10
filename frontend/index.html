@@ -308,6 +308,10 @@ footer a:hover{color:#fff}
 
 /* ============ proof bar ============ */
 #proofBar{display:flex;gap:10px;padding:10px 18px 0}
+#proofBar.idle .pc{display:none}
+#proofBar.idle::before{content:'TRACK-1 PROOF — not tested yet · press ▶ JUDGE DEMO and every card below is verified against the live store';
+  display:block;flex:1;padding:9px 14px;border:1px dashed rgba(139,92,246,.4);border-radius:10px;
+  color:#8f86ab;font:700 10px/1.6 "JetBrains Mono",monospace;letter-spacing:.08em}
 .pc{flex:1;min-width:150px;display:flex;align-items:center;gap:11px;padding:9px 14px;
   border:1px solid rgba(139,92,246,.25);border-radius:12px;background:rgba(18,9,36,.6)}
 .pc b{font:700 15px/1.1 "JetBrains Mono",monospace;color:#efe7ff;white-space:nowrap}
@@ -389,6 +393,11 @@ footer a:hover{color:#fff}
   border-radius:7px;padding:2px 10px;cursor:pointer;font-size:12px}
 #dockBody{display:flex;flex-direction:column;height:clamp(250px, var(--chat-h, 34vh), 78vh);padding:0 14px 10px;position:relative}
 #dockBody #log{flex:1;min-height:0;overflow-y:auto;padding-top:8px;position:relative}
+/* prose is sans and readable; mono is reserved for numbers and ids */
+#log .msg, #log .bubble, .mi, .ctx-line, .cand, #dQuery, .op-card, .ws-s, #wsSessList,
+#demoMini .dm span{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+#log .bubble{font-size:14px;line-height:1.65}
+.mi{font-size:12.5px}
 #dockGrip{height:12px;cursor:ns-resize;flex:none;display:flex;align-items:center;justify-content:center;touch-action:none}
 #dockGrip::before{content:'';width:52px;height:3px;border-radius:2px;background:rgba(139,92,246,.35)}
 #dockGrip:hover::before{background:rgba(139,92,246,.7)}
@@ -412,25 +421,32 @@ footer a:hover{color:#fff}
   border-radius:7px;border:1px solid rgba(139,92,246,.3);background:rgba(139,92,246,.08);
   color:#8f86ab;font:600 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.06em;cursor:pointer}
 .audit-badge:hover{color:#e6ddff;border-color:rgba(232,67,147,.55)}
+.rescue-line{display:block;margin-top:4px;font:600 10px/1.4 "JetBrains Mono",monospace;color:#fbbf24;letter-spacing:.04em}
+#copyAudit{float:right;margin:-2px 0 6px;padding:4px 10px;border-radius:7px;border:1px solid rgba(139,92,246,.35);
+  background:none;color:#9d92c0;cursor:pointer;font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.08em}
+#copyAudit:hover{color:#e6ddff}
 
 /* readable line lengths regardless of viewport width */
-#log{max-width:980px;width:100%;margin:0 auto}
-#composer #inWrap,#composer #quota{max-width:980px;margin-left:auto;margin-right:auto}
+#log{max-width:800px;width:100%;margin:0 auto}
+#composer #inWrap,#composer #quota{max-width:800px;margin-left:auto;margin-right:auto}
 #input{resize:none}
 
-/* ============ chat workspace (three-pane mode) ============ */
-#workspace{display:none;position:fixed;inset:0;z-index:80;background:#07040f;
-  grid-template-rows:52px 1fr;grid-template-columns:250px 1fr 400px;
-  grid-template-areas:"head head head" "sess conv evid"}
-#workspace.on{display:grid}
-#wsHead{grid-area:head;display:flex;align-items:center;gap:14px;padding:0 20px;
-  border-bottom:1px solid rgba(139,92,246,.25);
-  font:700 12px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:#e6ddff}
-#wsHead .sub{font-weight:400;font-size:10px;letter-spacing:.06em;color:#6f6590}
-#wsBack{margin-left:auto;background:none;border:1px solid rgba(232,67,147,.5);color:#ff8ab5;
-  border-radius:9px;padding:7px 16px;cursor:pointer;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.1em}
-#wsBack:hover{background:rgba(232,67,147,.12)}
-#wsSess{grid-area:sess;border-right:1px solid rgba(139,92,246,.18);padding:14px;overflow-y:auto}
+/* ============ two first-class modes ============ */
+#modeSwitch{display:flex;gap:0;border:1px solid rgba(139,92,246,.4);border-radius:10px;overflow:hidden;margin-left:14px}
+#modeSwitch button{padding:8px 16px;border:0;background:none;color:#8f86ab;cursor:pointer;
+  font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.12em}
+#modeSwitch button.on{background:rgba(139,92,246,.22);color:#efe7ff}
+body.mode-chat .app > #proofBar, body.mode-chat .app > #tabBar,
+body.mode-chat .app > main, body.mode-chat .app > #chatDock,
+body.mode-chat .app > #narrowNote{display:none !important}
+body.mode-lab #workspace{display:none}
+/* ============ conversation workbench (default mode) ============ */
+#workspace{position:fixed;left:0;right:0;bottom:24px;top:var(--header-h,64px);z-index:40;
+  display:grid;background:transparent;
+  grid-template-columns:232px minmax(480px,1fr) 420px;
+  grid-template-areas:"sess conv evid"}
+#workspace > *{background:rgba(10,6,20,.92)}
+#wsSess{grid-area:sess;min-height:0;border-right:1px solid rgba(139,92,246,.18);padding:14px;overflow-y:auto}
 #wsSess h5{font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:#8f86ab;margin:0 0 10px}
 #wsNew{width:100%;margin-bottom:12px;padding:8px;border-radius:9px;border:1px dashed rgba(139,92,246,.45);
   background:none;color:#c4b5fd;cursor:pointer;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.1em}
@@ -440,13 +456,41 @@ footer a:hover{color:#fff}
 .ws-s:hover{background:rgba(139,92,246,.09)}
 .ws-s.on{border-color:rgba(232,67,147,.45);background:rgba(232,67,147,.07);color:#f3eeff}
 .ws-s .n{color:#6f6590;font:600 10px/1.6 "JetBrains Mono",monospace}
-#wsConv{grid-area:conv;display:flex;flex-direction:column;min-width:0;padding:0 18px 12px;position:relative}
+#wsConv{grid-area:conv;display:flex;flex-direction:column;min-width:0;min-height:0;padding:0 18px 12px;position:relative}
 #wsConv #log{flex:1;min-height:0;overflow-y:auto;padding-top:14px}
-#wsEvid{grid-area:evid;border-left:1px solid rgba(139,92,246,.18);overflow:hidden;display:flex}
-#wsEvid #inspector{width:100%;max-width:none;border:0;border-radius:0;margin:0;display:flex}
+#wsEvid{grid-area:evid;min-height:0;border-left:1px solid rgba(139,92,246,.18);overflow:hidden;
+  display:flex;flex-direction:column}
+#evTabs{display:flex;flex:none;border-bottom:1px solid rgba(139,92,246,.2)}
+#evTabs button{flex:1;padding:11px 4px;border:0;background:none;color:#8f86ab;cursor:pointer;
+  font:700 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.1em;border-bottom:2px solid transparent}
+#evTabs button.on{color:#efe7ff;border-bottom-color:#e84393}
+.ev-panel{display:none;flex:1;min-height:0;overflow-y:auto;padding:14px}
+.ev-panel.on{display:block}
+#graphPanel{padding:0;position:relative;background:transparent !important}
+#graphPanel .g-hint{position:absolute;left:12px;bottom:10px;font:500 10px/1.5 "JetBrains Mono",monospace;color:#6f6590;pointer-events:none}
+#storeFilters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+#storeFilters button{padding:5px 9px;border-radius:7px;border:1px solid rgba(139,92,246,.3);
+  background:none;color:#8f86ab;cursor:pointer;font:700 9px/1 "JetBrains Mono",monospace;letter-spacing:.08em}
+#storeFilters button.on{color:#efe7ff;background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.65)}
+#demoMini{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+#demoMini .dm{display:flex;justify-content:space-between;padding:8px 11px;border-radius:9px;
+  border:1px solid rgba(139,92,246,.22);font-size:11.5px;color:#b7abdd}
+#demoMini .dm b{font:700 11px/1 "JetBrains Mono",monospace;color:#8f86ab}
+#demoMini .dm.ok b{color:#34d399}
+#demoRun{width:100%;margin-bottom:12px}
+#demoVerdict .rep{margin-top:0}
+#demoTiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+#mcpCard{margin-top:14px;padding:11px 13px;border:1px dashed rgba(52,211,153,.4);border-radius:10px;
+  color:#8fe6c3;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.1em}
+#mcpCard span{display:block;margin-top:6px;font:400 10.5px/1.6 "JetBrains Mono",monospace;color:#6f9585;letter-spacing:.02em}
+/* graph tab: punch a window through to the full-screen canvas */
+body.graph-open #workspace > #wsSess, body.graph-open #workspace > #wsConv{background:rgba(10,6,20,.96)}
+body.graph-open #workspace{background:transparent}
 @media (max-width:1100px){
-  #workspace{grid-template-columns:1fr;grid-template-areas:"head" "conv"}
+  #workspace{grid-template-columns:1fr;grid-template-areas:"conv"}
   #wsSess,#wsEvid{display:none}
+  #modeSwitch{margin-left:6px}
+  #modeSwitch button{padding:7px 9px;font-size:9px}
 }
 #dockSess{margin-left:auto;display:flex;gap:8px;align-items:center}
 #dockSess select{max-width:190px;padding:4px 8px;font-size:11px}
@@ -470,6 +514,10 @@ footer a:hover{color:#fff}
 .sc-meta{margin-top:7px;font:700 10.5px/1.5 "JetBrains Mono",monospace;color:#c084fc}
 #chatDock.min #dockBar{border-bottom:none}
 
+@media (prefers-reduced-motion: reduce){
+  canvas#space{display:none}
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
 @media (max-width:1100px){
   #tabBar{display:flex}
   main{padding:10px;gap:0}
@@ -483,7 +531,8 @@ footer a:hover{color:#fff}
   #proofBar{overflow-x:auto;padding:8px 10px 0}
   .pc{flex:none;min-width:158px}
   .pc span{font-size:8.5px}
-  header{padding:10px 12px;gap:8px}
+  header{padding:8px 10px;gap:6px;flex-wrap:wrap}
+  .scene-tabs a{padding:6px 7px;font-size:8.5px}
   .h-stat,.badge{display:none}
   #narrowNote{display:none}
 }
@@ -507,6 +556,10 @@ footer a:hover{color:#fff}
     <nav class="scene-tabs" id="sceneTabs">
       <a href="./" data-s="" title="Personal-assistant memory scenario">PERSONAL</a>
       <a href="./?seed=devops" data-s="devops" title="Production runbook memory for a DevOps agent">DEVOPS RUNBOOK</a>
+    </nav>
+    <nav id="modeSwitch">
+      <button data-mode="chat" class="on">CONVERSATION</button>
+      <button data-mode="lab">MEMORY LAB</button>
     </nav>
     <div class="h-spacer"></div>
     <div class="h-stat"><div class="v" id="hMem">0</div><div class="k">Active memories</div></div>
@@ -619,7 +672,7 @@ footer a:hover{color:#fff}
       <span class="dock-hint">the input device — memory decisions happen above</span>
       <span id="dockSess"></span>
       <span id="dockBtns">
-        <button id="dockFocus" title="Open the full chat workspace — sessions, full-height history, live memory evidence">⛶ WORKSPACE</button>
+        <button id="dockFocus" title="Back to the full conversation workbench">⧉ CONVERSATION</button>
         <button id="dockToggle" title="Collapse / expand">▾</button>
       </span>
     </div>
@@ -643,18 +696,38 @@ footer a:hover{color:#fff}
   </section>
 </div>
 
-<section id="workspace" aria-hidden="true">
-  <div id="wsHead"><span class="led"></span> CHAT WORKSPACE
-    <span class="sub">full conversation on the left · every memory decision live on the right</span>
-    <button id="wsBack">⤶ BACK TO DEMO CONSOLE</button>
-  </div>
+<section id="workspace" aria-hidden="false">
   <div id="wsSess">
     <h5>SESSIONS</h5>
     <button id="wsNew">+ NEW SESSION</button>
     <div id="wsSessList"></div>
   </div>
   <div id="wsConv"></div>
-  <div id="wsEvid"></div>
+  <div id="wsEvid">
+    <nav id="evTabs">
+      <button data-ev="turn" class="on">THIS TURN</button>
+      <button data-ev="graph">GRAPH</button>
+      <button data-ev="store">STORE</button>
+      <button data-ev="demo">DEMO</button>
+    </nav>
+    <section id="turnPanel" class="ev-panel on"></section>
+    <section id="graphPanel" class="ev-panel"><div class="g-hint">hover a node for its label · recalled and updated nodes light up during a turn</div></section>
+    <section id="storePanel" class="ev-panel">
+      <div id="storeFilters">
+        <button data-f="all" class="on">ALL</button><button data-f="active">ACTIVE</button><button data-f="superseded">SUPERSEDED</button><button data-f="consolidated">CONSOLIDATED</button><button data-f="forgotten">FORGOTTEN</button>
+      </div>
+      <div id="storeList"></div>
+      <div class="sec-t" style="margin-top:12px">Memory trace</div>
+      <div id="tracePanelSlot"></div>
+    </section>
+    <section id="demoPanel" class="ev-panel">
+      <div id="demoMini"></div>
+      <button class="btn primary" id="demoRun">▶ RUN THE JUDGE DEMO — 5 LIVE-VERIFIED CHECKS</button>
+      <div id="demoVerdict"><div class="d-empty">// run the demo — the verdict is computed from the live store</div></div>
+      <div id="demoTiles"></div>
+      <div id="mcpCard">MCP READY · 5 TOOLS<span>remember · recall · forget · sleep · stats — mount this store into any agent (backend/mcp_server.py)</span></div>
+    </section>
+  </div>
 </section>
 
 <footer>
@@ -708,12 +781,16 @@ async function api(path, opts){
 const cv = $('#space'), ctx = cv.getContext('2d');
 let W=0,H=0,DPR=1, CX=0, CY=0;
 function stageRect(){
-  const c = document.getElementById('center');
+  const c = document.body.classList.contains('graph-open')
+    ? document.getElementById('graphPanel')
+    : document.getElementById('center');
   if (!c) return null;
   const r = c.getBoundingClientRect();
   return (r.width > 60 && r.height > 60) ? r : null;
 }
 function resize(){
+  const hd = document.querySelector('header');
+  if (hd) document.documentElement.style.setProperty('--header-h', hd.offsetHeight+'px');
   DPR = Math.min(devicePixelRatio||1, 2);
   W = innerWidth; H = innerHeight;
   cv.width = W*DPR; cv.height = H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
@@ -823,6 +900,14 @@ function consolidateFx(childIds, merged){
 }
 
 function draw(ts){
+  // skip painting when nothing of the canvas is visible: page hidden, or
+  // conversation mode without the Graph tab (the workbench covers it)
+  if (document.hidden ||
+      (document.body.classList.contains('mode-chat')
+       && !document.body.classList.contains('graph-open'))){
+    requestAnimationFrame(draw);
+    return;
+  }
   ctx.clearRect(0,0,W,H);
   // nebula
   const g1 = ctx.createRadialGradient(CX-W*.18,CY-80,0,CX-W*.18,CY-80,W*.42);
@@ -835,59 +920,10 @@ function draw(ts){
   for (const s of stars){
     const tw = .35+.65*Math.abs(Math.sin(ts*.0005*s.s+s.p));
     const drift = s.l===2 ? (ts*.0000045)%1 : (ts*.0000018)%1;
-    ctx.globalAlpha = tw*(s.l===2?.75:.45); ctx.fillStyle = s.l===2?'#dfe6ff':'#8f9bd8';
+    ctx.globalAlpha = tw*(s.l===2?.38:.22); ctx.fillStyle = s.l===2?'#dfe6ff':'#8f9bd8';
     ctx.beginPath(); ctx.arc(((s.x+drift)%1)*W, s.y*H, s.r*(s.l===2?1.15:1), 0, 7); ctx.fill();
   }
   ctx.globalAlpha=1;
-  // occasional meteor
-  meteorT -= 16;
-  if (meteorT<=0 && !meteor){
-    const y0 = H*(0.08+Math.random()*0.5);
-    meteor = {x:-60, y:y0, vx:14+Math.random()*8, vy:3.5+Math.random()*2.5, life:0};
-    meteorT = 9000+Math.random()*12000;
-  }
-  if (meteor){
-    meteor.x += meteor.vx; meteor.y += meteor.vy; meteor.life += 16;
-    const gm = ctx.createLinearGradient(meteor.x, meteor.y, meteor.x-90, meteor.y-24);
-    gm.addColorStop(0,'rgba(230,235,255,.85)'); gm.addColorStop(1,'transparent');
-    ctx.strokeStyle=gm; ctx.lineWidth=1.4;
-    ctx.beginPath(); ctx.moveTo(meteor.x,meteor.y); ctx.lineTo(meteor.x-90,meteor.y-24); ctx.stroke();
-    if (meteor.x>W+120 || meteor.y>H+60) meteor=null;
-  }
-  // polar radar grid (very faint instrument backdrop)
-  ctx.save(); ctx.translate(CX,CY);
-  ctx.strokeStyle='rgba(139,92,246,.055)'; ctx.lineWidth=1;
-  for (const R of [120,205,290,375]){
-    ctx.beginPath(); ctx.ellipse(0,0,R,R*.62,0,0,7); ctx.stroke();
-  }
-  ctx.strokeStyle='rgba(139,92,246,.035)';
-  for (let k=0;k<12;k++){
-    const a=k*Math.PI/6;
-    ctx.beginPath(); ctx.moveTo(Math.cos(a)*70,Math.sin(a)*70*.62);
-    ctx.lineTo(Math.cos(a)*385,Math.sin(a)*385*.62); ctx.stroke();
-  }
-  // sweeping radar beam
-  const sw = (ts*.00035)%(Math.PI*2);
-  const swg = ctx.createConicGradient ? null : null;
-  ctx.globalAlpha=.10;
-  ctx.fillStyle='rgba(139,92,246,.5)';
-  ctx.beginPath(); ctx.moveTo(0,0);
-  ctx.ellipse(0,0,375,375*.62,0,sw,sw+.5); ctx.closePath(); ctx.fill();
-  ctx.globalAlpha=1;
-  ctx.restore();
-
-  // orbit rings
-  ctx.save(); ctx.translate(CX,CY);
-  for (let i=0;i<3;i++){
-    ctx.save();
-    ctx.rotate(ts*.00003*(i+1)+i*2.1);
-    ctx.strokeStyle = i===1?'rgba(255,45,120,.10)':'rgba(139,92,246,.10)';
-    ctx.lineWidth=1;
-    ctx.beginPath(); ctx.ellipse(0,0, 150+i*95, (150+i*95)*.44, i*.7, 0, 7); ctx.stroke();
-    ctx.restore();
-  }
-  ctx.restore();
-
   // core HUD: data arcs + readout
   const hud = window.__coreStats || {mem:0, reinf:0, saved:null, ctx:0};
   ctx.save(); ctx.translate(CX,CY);
@@ -1018,8 +1054,10 @@ function draw(ts){
       ctx.strokeStyle='rgba(200,200,220,.5)'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(n.x-r-2,n.y); ctx.lineTo(n.x+r+2,n.y); ctx.stroke();
     }
-    // star-label: memory snippet floats beside its node
-    if (n.status==='active' && nodes.size<=70 && n.scale>0.6){
+    // star-label: only nodes that matter right now get text - the current
+    // turn's recalls/updates (glow), lifecycle ghosts, and the hovered node.
+    const hot = n.glow > 0.04 || n.status !== 'active' || n.hover;
+    if (hot && n.scale > 0.6){
       const snip = n.content.length>26 ? n.content.slice(0,25)+'\u2026' : n.content;
       ctx.font='500 9px "JetBrains Mono", monospace';
       const tw2 = ctx.measureText(snip).width;
@@ -1098,6 +1136,8 @@ addEventListener('mousemove', ev=>{
     tip.style.left=Math.min(ev.clientX+16, innerWidth-300)+'px';
     tip.style.top=Math.min(ev.clientY+14, innerHeight-120)+'px';
   } else tip.style.display='none';
+  for (const n of nodes.values()) n.hover = false;
+  if (best) best.hover = true;
 });
 
 /* ================================================================ chat === */
@@ -1147,39 +1187,56 @@ const dock = $('#chatDock');
   });
   $('#dockFocus').addEventListener('click', ev=>{
     ev.stopPropagation();
-    enterWs();
+    setMode('chat');
   });
 }
 
-/* --- chat workspace: sessions | full-height conversation | live evidence --- */
+/* --- two first-class modes: CONVERSATION workbench / MEMORY LAB --- */
 let SESSIONS = [];
 const ws = $('#workspace');
+const INSP_BODY = $('#inspBody');
+const INSP_KIDS = [...INSP_BODY.children];   // original order, for restoring
+let MODE = null, lastAudit = null;
+
 function renderWsSessions(){
   $('#wsSessList').innerHTML = SESSIONS.map(s =>
     '<div class="ws-s'+(s.id===sessionId?' on':'')+'" data-id="'+s.id+'">'
     +'<span>'+esc(s.title||'Session')+'</span><span class="n">'+(s.message_count||0)+'</span></div>'
   ).join('');
 }
-function enterWs(){
-  if (ws.classList.contains('on')) return;
-  dock.classList.remove('min','focus');
-  $('#wsConv').append(log, $('#newMsgPill'), $('#composer'));
-  $('#wsEvid').append($('#inspector'));
-  ws.classList.add('on');
-  ws.setAttribute('aria-hidden','false');
-  renderWsSessions();
-  scrollLog(true);
-  input.focus();
+function evTab(name){
+  document.querySelectorAll('#evTabs button').forEach(b=>b.classList.toggle('on', b.dataset.ev===name));
+  document.querySelectorAll('.ev-panel').forEach(p=>p.classList.toggle('on', p.id===name+'Panel'));
+  document.body.classList.toggle('graph-open', name==='graph');
+  if (name==='graph') requestAnimationFrame(resize);
+  if (name==='store') renderStore();
 }
-function exitWs(){
-  const body = $('#dockBody');
-  body.append(log, $('#newMsgPill'), $('#composer'));
-  document.querySelector('main').appendChild($('#inspector'));
-  ws.classList.remove('on');
-  ws.setAttribute('aria-hidden','true');
-  scrollLog(true);
+function setMode(mode){
+  if (mode===MODE) return;
+  MODE = mode;
+  document.body.classList.toggle('mode-chat', mode==='chat');
+  document.body.classList.toggle('mode-lab', mode==='lab');
+  document.querySelectorAll('#modeSwitch button').forEach(b=>b.classList.toggle('on', b.dataset.mode===mode));
+  if (mode==='chat'){
+    $('#wsConv').append(log, $('#newMsgPill'), $('#composer'));
+    $('#turnPanel').appendChild($('#decision'));
+    $('#tracePanelSlot').appendChild($('#feed'));
+    $('#demoTiles').appendChild(document.querySelector('#inspBody .tiles'));
+    renderWsSessions(); renderProofMini();
+    scrollLog(true);
+  } else {
+    document.body.classList.remove('graph-open');
+    $('#dockBody').append(log, $('#newMsgPill'), $('#composer'));
+    INSP_KIDS.forEach(k => INSP_BODY.appendChild(k));   // original order back
+    const dec = $('#decision'); if (dec && dec.parentNode !== INSP_KIDS[0].parentNode){}
+    scrollLog(true);
+  }
+  requestAnimationFrame(resize);
 }
-$('#wsBack').addEventListener('click', exitWs);
+document.querySelectorAll('#modeSwitch button').forEach(b =>
+  b.addEventListener('click', ()=>setMode(b.dataset.mode)));
+document.querySelectorAll('#evTabs button').forEach(b =>
+  b.addEventListener('click', ()=>evTab(b.dataset.ev)));
 $('#wsNew').addEventListener('click', async ()=>{ await newSession(); renderWsSessions(); });
 $('#wsSessList').addEventListener('click', async ev=>{
   const el = ev.target.closest('.ws-s'); if (!el || el.dataset.id===sessionId) return;
@@ -1188,8 +1245,46 @@ $('#wsSessList').addEventListener('click', async ev=>{
   await loadHistory();
   renderWsSessions();
 });
+
+/* store tab: full-lifecycle memory list with status filters */
+let lastGraphData = {nodes:[]}, storeFilter = 'all';
+function renderStore(){
+  const list = $('#storeList'); if (!list) return;
+  const rows = lastGraphData.nodes.filter(n => storeFilter==='all' || n.status===storeFilter)
+    .sort((a,b)=>(b.retention??0)-(a.retention??0));
+  if (!rows.length){ list.innerHTML = '<div class="empty">// nothing with this status yet</div>'; return; }
+  list.innerHTML = rows.map(n=>{
+    const c = TYPE_COLOR[n.type]||'#999';
+    const st = n.status!=='active' ? ' <i style="color:#8f86ab;font-style:normal">· '+n.status+'</i>' : '';
+    return '<div class="mi" style="border-left-color:'+c+';opacity:'+(n.status==='active'?1:.6)+'">'
+      +'<div class="row"><span class="ty" style="color:'+c+'">'+n.type+' · ×'+(n.access_count||0)+st+'</span></div>'
+      + esc(n.content)
+      +'<div class="bar"><i style="width:'+((n.retention??0)*100).toFixed(0)+'%;background:'+c+'"></i></div></div>';
+  }).join('');
+}
+$('#storeFilters').addEventListener('click', ev=>{
+  const b = ev.target.closest('button'); if (!b) return;
+  storeFilter = b.dataset.f;
+  document.querySelectorAll('#storeFilters button').forEach(x=>x.classList.toggle('on', x===b));
+  renderStore();
+});
+
+/* demo tab: compact proof mirror + entry point */
+function renderProofMini(){
+  const el = $('#demoMini'); if (!el) return;
+  const rows = [
+    ['Persistence — cross-session recall', PROOF.crossRecall ? 'recall ✓' : (PROOF.crossRecall===null?'not tested yet':'—'), !!PROOF.crossRecall],
+    ['Belief integrity — stale leakage', PROOF.staleOK===null ? (PROOF.revised>0?PROOF.revised+' revised':'not tested yet') : (PROOF.staleOK?'stale 0 ✓':'stale !'), PROOF.staleOK===true||PROOF.revised>0],
+    ['Context budget', PROOF.spent===null ? 'not tested yet' : PROOF.spent+' / '+PROOF.budget+' tk ✓', PROOF.spent!==null],
+    ['Critical rescue below floor', PROOF.rescueSim===null ? 'not tested yet' : 'sim '+PROOF.rescueSim.toFixed(2)+' ⛑', PROOF.rescueSim!==null],
+    ['Sleep consolidation', PROOF.sleep===null ? 'not tested yet' : PROOF.sleep, PROOF.sleep!==null],
+  ];
+  el.innerHTML = rows.map(r=>'<div class="dm'+(r[2]?' ok':'')+'"><span>'+r[0]+'</span><b>'+esc(String(r[1]))+'</b></div>').join('');
+}
+$('#demoRun').addEventListener('click', ()=>{ judgeDemo(); });
+
 document.addEventListener('keydown', ev=>{
-  if (ev.key==='Escape' && ws.classList.contains('on')) exitWs();
+  if (ev.key==='Escape' && MODE==='lab') setMode('chat');
 });
 
 function addUser(text){
@@ -1243,6 +1338,17 @@ function feed(kind, txt, color){
 const WEIGHTS_UI = {semantic:.55, recency:.18, importance:.17, usage:.10};
 function dShow(id){ const el=$(id); if(el) el.style.display='block'; $('#decision .d-empty').style.display='none'; }
 function renderDecision(d){
+  window.__lastAudit = d;
+  if (!$('#copyAudit')){
+    const b = document.createElement('button');
+    b.id = 'copyAudit'; b.textContent = 'COPY AUDIT JSON';
+    b.addEventListener('click', ()=>{
+      const a = window.__lastAudit || {};
+      navigator.clipboard.writeText(JSON.stringify(a, null, 2))
+        .then(()=>{ b.textContent='COPIED ✓'; setTimeout(()=>b.textContent='COPY AUDIT JSON', 1400); });
+    });
+    $('#decision').prepend(b);
+  }
   dShow('#dQueryW'); $('#dQuery').textContent = d.query || '';
   dShow('#dCandsW');
   const sel = (d.memories||[]).map(m=>
@@ -1308,6 +1414,10 @@ function renderProof(){
       PROOF.spent===null?null:(PROOF.spent<=PROOF.budget?'ok':'warn'));
   set('#pcRescue', PROOF.rescueSim===null?'—':'sim '+PROOF.rescueSim.toFixed(2)+' ⛑', PROOF.rescueSim===null?null:'ok');
   set('#pcSleep', PROOF.sleep===null?'—':PROOF.sleep, PROOF.sleep===null?null:'ok');
+  const tested = PROOF.crossRecall!==null || PROOF.revised>0 || PROOF.spent!==null
+    || PROOF.rescueSim!==null || PROOF.sleep!==null;
+  $('#proofBar').classList.toggle('idle', !tested);
+  if (typeof renderProofMini === 'function') renderProofMini();
 }
 /* persistent before/after cards on the stage */
 function stageCard(id, html){
@@ -1342,6 +1452,7 @@ async function send(text){
         if (!evm||!dam) continue;
         const ev = evm[1], d = JSON.parse(dam[1]);
         if (ev==='retrieval'){
+          window.__lastRecall = d.memories;
           renderDecision(d);
           setPhase(bot,'reason',['recall']);
           recallsNow += d.memories.length;
@@ -1376,8 +1487,11 @@ async function send(text){
         } else if (ev==='done'){
           setPhase(bot,null,['recall','reason','memorize']);
           bubble.innerHTML = md(acc);
-          if (d.message_id && d.audit)
-            bot.insertAdjacentHTML('beforeend', auditBadgeHTML(d.message_id, d.audit));
+          if (d.message_id && d.audit){
+            const resc = (window.__lastRecall||[]).find(m=>m.rescued);
+            bot.insertAdjacentHTML('beforeend', auditBadgeHTML(d.message_id, d.audit,
+              {ms: d.elapsed_ms, rescue: resc ? resc.content.slice(0,60) : null}));
+          }
           $('#quotaL').textContent = 'LAST: '+d.elapsed_ms+'MS · '+(d.usage.total_tokens||0)+' TK · '+d.recalled+' RECALLED';
           const cs = SESSIONS.find(x=>x.id===sessionId);
           if (cs){ cs.message_count = (cs.message_count||0)+2;
@@ -1442,7 +1556,9 @@ async function refresh(){
   try{
     const [g, s] = await Promise.all([
       api('/memories?user_id='+userId), api('/stats?user_id='+userId)]);
+    lastGraphData = g;
     setGraph(g); renderStats(s, g);
+    if (MODE==='chat'){ renderStore(); renderProofMini(); }
     if (g.nodes.some(n=>n.status==='active')) $('#hero').classList.add('gone');
   }catch(e){ console.warn('refresh', e); }
 }
@@ -1450,6 +1566,7 @@ async function refresh(){
 /* ============================================================= sessions === */
 async function loadSessions(){
   const b = await api('/bootstrap?user_id='+userId+(SEED?'&seed='+encodeURIComponent(SEED):''));
+  lastGraphData = b.graph;
   setGraph(b.graph); renderStats(b.stats, b.graph);
   $('#quotaR').textContent = 'DEMO QUOTA '+b.daily_used+'/'+b.daily_limit;
   const sel = $('#sessSel');
@@ -1463,14 +1580,20 @@ async function loadSessions(){
     +' · '+(s.message_count||0)+' msg</option>').join('');
   sessionId = b.sessions[0].id;
   sel.value = sessionId;
+  renderWsSessions();
   await loadHistory();
   if (b.graph.nodes.some(n=>n.status==='active')) $('#hero').classList.add('gone');
 }
-function auditBadgeHTML(mid, a){
+function auditBadgeHTML(mid, a, extra){
   if (!a) return '';
-  return '<span class="audit-badge" data-mid="'+mid+'" title="Open this turn’s memory decision in the Inspector">◈ '
-    +a.recalled+' recalled · '+(a.spent??0)+'/'+(a.budget??800)+' tk'
-    +(a.ops ? ' · '+a.ops+' op'+(a.ops>1?'s':'') : '')+'</span>';
+  const bits = [a.recalled+' memories recalled', (a.spent??0)+' / '+(a.budget??800)+' tk'];
+  if (extra && extra.ms) bits.push(extra.ms+' ms');
+  if (a.ops) bits.push(a.ops+' memory op'+(a.ops>1?'s':''));
+  let line = '<span class="audit-badge" data-mid="'+mid+'" title="Open this turn’s memory decision in the Evidence pane">◈ '
+    + bits.join(' · ') + '</span>';
+  if (extra && extra.rescue)
+    line += '<span class="rescue-line">⛑ critical rescue: '+esc(extra.rescue)+'</span>';
+  return line;
 }
 function historyMsgEl(m){
   const d = document.createElement('div');
@@ -1616,6 +1739,7 @@ async function jdFreshUser(){
   renderProof();
 }
 async function judgeDemo(){
+  setMode('lab');
   if (JD.run || busy) return;
   JD.run = true; JD.stop = false;
   tlReset();
@@ -1722,6 +1846,8 @@ async function judgeDemo(){
       + extra.map(t=>'<div>'+t+'</div>').join('')
       + '<b>TRACK 1 REQUIREMENTS: '+passed+' / 5 PASSED</b></div>';
     goTab('timeline');
+    $('#demoVerdict').innerHTML = $('#tlResults').innerHTML;
+    renderProofMini();
     $('#jdMsg').textContent = '✓ JUDGE DEMO COMPLETE — '+passed+'/5 verified · results pinned in the timeline · try the DEVOPS RUNBOOK tab ↗';
     const dv = document.querySelector('#sceneTabs a[data-s="devops"]');
     if (dv) dv.classList.add('glow');
@@ -1757,6 +1883,14 @@ $('#dockBar').addEventListener('click', ev=>{
   requestAnimationFrame(resize);
 });
 $('#input').addEventListener('focus', ()=>$('#chatDock').classList.remove('min'));
+
+/* boot mode: default conversation; ?mode=lab opens the lab; ?judge=1 runs the demo */
+{
+  const q = new URLSearchParams(location.search);
+  if (q.get('judge') === '1'){ setMode('lab'); setTimeout(()=>judgeDemo(), 900); }
+  else if (q.get('mode') === 'lab') setMode('lab');
+  else setMode('chat');
+}
 
 /* scene tab highlight */
 document.querySelectorAll('#sceneTabs a').forEach(a=>{
