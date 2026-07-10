@@ -51,6 +51,28 @@ test.describe('memory decision console', () => {
     await expect(input).toHaveValue('draft that must stay unsent');
   });
 
+  test('chat workspace: three panes, chat works, exit restores console', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#dockFocus').click();
+    await expect(page.locator('#workspace')).toBeVisible();
+    await expect(page.locator('#wsSessList .ws-s')).toHaveCount(1);
+    // inspector lives in the evidence pane while the workspace is open
+    await expect(page.locator('#wsEvid #inspector')).toBeVisible();
+
+    const input = page.getByPlaceholder('Talk to your agent');
+    await input.fill('Remember that I always deploy on Tuesdays.');
+    await input.press('Enter');
+    const bot = page.locator('#wsConv .msg.bot').last();
+    await expect(bot.locator('.bubble')).toContainText(/\w/, { timeout: 30000 });
+    // the evidence pane reacted to the live turn
+    await expect(page.locator('#wsEvid #dQuery')).toContainText('Tuesdays');
+
+    await page.locator('#wsBack').click();
+    await expect(page.locator('#workspace')).toBeHidden();
+    await expect(page.locator('#dockBody #log')).toBeVisible();
+    await expect(page.locator('main #inspector')).toBeVisible();
+  });
+
   test('judge demo: 5/5 live-verified against the store', async ({ page }) => {
     await page.goto('/');
     await page.locator('#jdBtn').click();

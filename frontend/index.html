@@ -412,6 +412,42 @@ footer a:hover{color:#fff}
   border-radius:7px;border:1px solid rgba(139,92,246,.3);background:rgba(139,92,246,.08);
   color:#8f86ab;font:600 9.5px/1 "JetBrains Mono",monospace;letter-spacing:.06em;cursor:pointer}
 .audit-badge:hover{color:#e6ddff;border-color:rgba(232,67,147,.55)}
+
+/* readable line lengths regardless of viewport width */
+#log{max-width:980px;width:100%;margin:0 auto}
+#composer #inWrap,#composer #quota{max-width:980px;margin-left:auto;margin-right:auto}
+#input{resize:none}
+
+/* ============ chat workspace (three-pane mode) ============ */
+#workspace{display:none;position:fixed;inset:0;z-index:80;background:#07040f;
+  grid-template-rows:52px 1fr;grid-template-columns:250px 1fr 400px;
+  grid-template-areas:"head head head" "sess conv evid"}
+#workspace.on{display:grid}
+#wsHead{grid-area:head;display:flex;align-items:center;gap:14px;padding:0 20px;
+  border-bottom:1px solid rgba(139,92,246,.25);
+  font:700 12px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:#e6ddff}
+#wsHead .sub{font-weight:400;font-size:10px;letter-spacing:.06em;color:#6f6590}
+#wsBack{margin-left:auto;background:none;border:1px solid rgba(232,67,147,.5);color:#ff8ab5;
+  border-radius:9px;padding:7px 16px;cursor:pointer;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.1em}
+#wsBack:hover{background:rgba(232,67,147,.12)}
+#wsSess{grid-area:sess;border-right:1px solid rgba(139,92,246,.18);padding:14px;overflow-y:auto}
+#wsSess h5{font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.16em;color:#8f86ab;margin:0 0 10px}
+#wsNew{width:100%;margin-bottom:12px;padding:8px;border-radius:9px;border:1px dashed rgba(139,92,246,.45);
+  background:none;color:#c4b5fd;cursor:pointer;font:700 10px/1 "JetBrains Mono",monospace;letter-spacing:.1em}
+#wsNew:hover{background:rgba(139,92,246,.1)}
+.ws-s{padding:9px 11px;border-radius:9px;border:1px solid transparent;cursor:pointer;
+  font-size:12px;color:#b7abdd;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
+.ws-s:hover{background:rgba(139,92,246,.09)}
+.ws-s.on{border-color:rgba(232,67,147,.45);background:rgba(232,67,147,.07);color:#f3eeff}
+.ws-s .n{color:#6f6590;font:600 10px/1.6 "JetBrains Mono",monospace}
+#wsConv{grid-area:conv;display:flex;flex-direction:column;min-width:0;padding:0 18px 12px;position:relative}
+#wsConv #log{flex:1;min-height:0;overflow-y:auto;padding-top:14px}
+#wsEvid{grid-area:evid;border-left:1px solid rgba(139,92,246,.18);overflow:hidden;display:flex}
+#wsEvid #inspector{width:100%;max-width:none;border:0;border-radius:0;margin:0;display:flex}
+@media (max-width:1100px){
+  #workspace{grid-template-columns:1fr;grid-template-areas:"head" "conv"}
+  #wsSess,#wsEvid{display:none}
+}
 #dockSess{margin-left:auto;display:flex;gap:8px;align-items:center}
 #dockSess select{max-width:190px;padding:4px 8px;font-size:11px}
 #dockSess .btn{padding:5px 12px;font-size:10px}
@@ -583,7 +619,7 @@ footer a:hover{color:#fff}
       <span class="dock-hint">the input device — memory decisions happen above</span>
       <span id="dockSess"></span>
       <span id="dockBtns">
-        <button id="dockFocus" title="Focus chat — fill the screen">⛶</button>
+        <button id="dockFocus" title="Open the full chat workspace — sessions, full-height history, live memory evidence">⛶ WORKSPACE</button>
         <button id="dockToggle" title="Collapse / expand">▾</button>
       </span>
     </div>
@@ -606,6 +642,20 @@ footer a:hover{color:#fff}
     </div>
   </section>
 </div>
+
+<section id="workspace" aria-hidden="true">
+  <div id="wsHead"><span class="led"></span> CHAT WORKSPACE
+    <span class="sub">full conversation on the left · every memory decision live on the right</span>
+    <button id="wsBack">⤶ BACK TO DEMO CONSOLE</button>
+  </div>
+  <div id="wsSess">
+    <h5>SESSIONS</h5>
+    <button id="wsNew">+ NEW SESSION</button>
+    <div id="wsSessList"></div>
+  </div>
+  <div id="wsConv"></div>
+  <div id="wsEvid"></div>
+</section>
 
 <footer>
   <span id="uid"></span>
@@ -1085,12 +1135,50 @@ const dock = $('#chatDock');
   });
   $('#dockFocus').addEventListener('click', ev=>{
     ev.stopPropagation();
-    dock.classList.toggle('focus');
-    dock.classList.remove('min');
-    $('#dockFocus').textContent = dock.classList.contains('focus') ? '⤡' : '⛶';
-    scrollLog(true);
+    enterWs();
   });
 }
+
+/* --- chat workspace: sessions | full-height conversation | live evidence --- */
+let SESSIONS = [];
+const ws = $('#workspace');
+function renderWsSessions(){
+  $('#wsSessList').innerHTML = SESSIONS.map(s =>
+    '<div class="ws-s'+(s.id===sessionId?' on':'')+'" data-id="'+s.id+'">'
+    +'<span>'+esc(s.title||'Session')+'</span><span class="n">'+(s.message_count||0)+'</span></div>'
+  ).join('');
+}
+function enterWs(){
+  if (ws.classList.contains('on')) return;
+  dock.classList.remove('min','focus');
+  $('#wsConv').append(log, $('#newMsgPill'), $('#composer'));
+  $('#wsEvid').append($('#inspector'));
+  ws.classList.add('on');
+  ws.setAttribute('aria-hidden','false');
+  renderWsSessions();
+  scrollLog(true);
+  input.focus();
+}
+function exitWs(){
+  const body = $('#dockBody');
+  body.append(log, $('#newMsgPill'), $('#composer'));
+  document.querySelector('main').appendChild($('#inspector'));
+  ws.classList.remove('on');
+  ws.setAttribute('aria-hidden','true');
+  scrollLog(true);
+}
+$('#wsBack').addEventListener('click', exitWs);
+$('#wsNew').addEventListener('click', async ()=>{ await newSession(); renderWsSessions(); });
+$('#wsSessList').addEventListener('click', async ev=>{
+  const el = ev.target.closest('.ws-s'); if (!el || el.dataset.id===sessionId) return;
+  sessionId = el.dataset.id;
+  $('#sessSel').value = sessionId;
+  await loadHistory();
+  renderWsSessions();
+});
+document.addEventListener('keydown', ev=>{
+  if (ev.key==='Escape' && ws.classList.contains('on')) exitWs();
+});
 
 function addUser(text){
   const d = document.createElement('div'); d.className='msg user'; d.textContent=text;
@@ -1279,6 +1367,9 @@ async function send(text){
           if (d.message_id && d.audit)
             bot.insertAdjacentHTML('beforeend', auditBadgeHTML(d.message_id, d.audit));
           $('#quotaL').textContent = 'LAST: '+d.elapsed_ms+'MS · '+(d.usage.total_tokens||0)+' TK · '+d.recalled+' RECALLED';
+          const cs = SESSIONS.find(x=>x.id===sessionId);
+          if (cs){ cs.message_count = (cs.message_count||0)+2;
+            if (ws.classList.contains('on')) renderWsSessions(); }
           refresh();
         } else if (ev==='error'){
           bubble.innerHTML = md(acc || '⚠ '+d.message);
@@ -1355,6 +1446,7 @@ async function loadSessions(){
       body:JSON.stringify({user_id:userId, title:'Session 1'})});
     b.sessions = [{id:s.id, title:'Session 1', message_count:0}];
   }
+  SESSIONS = b.sessions;
   sel.innerHTML = b.sessions.map(s=>'<option value="'+s.id+'">'+esc(s.title||'Session')
     +' · '+(s.message_count||0)+' msg</option>').join('');
   sessionId = b.sessions[0].id;
@@ -1425,6 +1517,7 @@ async function newSession(){
     body:JSON.stringify({user_id:userId, title:'Session '+n})});
   const opt = document.createElement('option'); opt.value=s.id; opt.textContent='Session '+n+' · 0 msg';
   $('#sessSel').prepend(opt); $('#sessSel').value=s.id; sessionId=s.id;
+  SESSIONS.unshift({id:s.id, title:'Session '+n, message_count:0});
   log.innerHTML='';
   const d = document.createElement('div'); d.className='msg bot';
   d.innerHTML='<div class="bubble"><p><strong>New session — fresh context window.</strong> My short-term history is empty, but my long-term memory persists. Ask me what I remember about you.</p></div>';
