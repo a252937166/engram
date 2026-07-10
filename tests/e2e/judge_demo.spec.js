@@ -83,4 +83,97 @@ test.describe('memory decision console', () => {
       .toContainText('active Acme employment claims: 0');
   });
 
+  test('streaming follows only near the bottom; pill appears otherwise', async ({ page }) => {
+    await page.goto('/');
+    const state = await page.evaluate(() => {
+      const log = document.querySelector('#log');
+      // build a tall history so the log actually scrolls
+      for (let i = 0; i < 40; i++) {
+        const d = document.createElement('div');
+        d.className = 'msg ' + (i % 2 ? 'bot' : 'user');
+        d.textContent = 'filler message ' + i;
+        log.appendChild(d);
+      }
+      // reader scrolled up -> appended content must NOT hijack the viewport
+      log.scrollTop = 0;
+      scrollLog();
+      const hijacked = log.scrollTop > 5;
+      const pillShown = document.querySelector('#newMsgPill')
+        .classList.contains('show');
+      // reader jumps back down -> follow again, pill clears
+      scrollLog(true);
+      const followed = Math.abs(
+        log.scrollHeight - log.scrollTop - log.clientHeight) < 5;
+      const pillCleared = !document.querySelector('#newMsgPill')
+        .classList.contains('show');
+      return { hijacked, pillShown, followed, pillCleared };
+    });
+    expect(state.hijacked).toBe(false);
+    expect(state.pillShown).toBe(true);
+    expect(state.followed).toBe(true);
+    expect(state.pillCleared).toBe(true);
+  });
+
+  test('history pagination preserves the reading position', async ({ page }) => {
+    await page.goto('/');
+    // create 26 turns (52 rows) straight through the API - fast in fake mode
+    const seeded = await page.evaluate(async () => {
+      const uid = localStorage.getItem('engram_uid');
+      const s = await (await fetch('/api/sessions', {method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: uid, title: 'long history'})})).json();
+      for (let i = 0; i < 26; i++) {
+        // read the body to completion - the SSE stream IS the turn; the
+        // fetch promise alone resolves on headers, before anything persists
+        const r = await fetch('/api/chat', {method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({user_id: uid, session_id: s.id,
+            message: 'filler turn number ' + i + ' about nothing much'})});
+        await r.text();
+      }
+      return s.id;
+    });
+    await page.reload();
+    await expect(page.locator('#sessSel option')).toHaveCount(2, { timeout: 15000 });
+    await page.locator('#sessSel').selectOption(seeded);
+    const earlier = page.locator('.load-earlier');
+    await expect(earlier).toBeVisible({ timeout: 15000 });
+
+    const anchorText = await page.evaluate(() => {
+      const log = document.querySelector('#log');
+      const first = log.querySelector('.msg');
+      return first.textContent.slice(0, 30);
+    });
+    await earlier.click();
+    await expect(page.locator('#log .msg').first())
+      .not.toHaveText(new RegExp('^' + anchorText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), { timeout: 10000 });
+    // the previously-first message is still inside the viewport (no jump)
+    const anchored = await page.evaluate(txt => {
+      const log = document.querySelector('#log');
+      const el = [...log.querySelectorAll('.msg')]
+        .find(m => m.textContent.startsWith(txt));
+      if (!el) return false;
+      const lr = log.getBoundingClientRect(), er = el.getBoundingClientRect();
+      return er.bottom > lr.top - 4 && er.top < lr.bottom + 4;
+    }, anchorText);
+    expect(anchored).toBe(true);
+  });
+
+  test('chat dock drag-resize persists', async ({ page }) => {
+    await page.goto('/');
+    const grip = page.locator('#dockGrip');
+    const before = await page.evaluate(() =>
+      document.querySelector('#dockBody').getBoundingClientRect().height);
+    const box = await grip.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + 3);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y - 120, { steps: 6 });
+    await page.mouse.up();
+    const after = await page.evaluate(() =>
+      document.querySelector('#dockBody').getBoundingClientRect().height);
+    expect(after).toBeGreaterThan(before + 60);
+    const saved = await page.evaluate(() => localStorage.getItem('engram_chat_h'));
+    expect(saved).toMatch(/px/);
+  });
+
 });

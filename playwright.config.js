@@ -9,8 +9,24 @@ module.exports = defineConfig({
   retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: 'http://127.0.0.1:8788',
-    viewport: { width: 1440, height: 900 },
   },
+  projects: [
+    {
+      name: 'desktop',
+      testIgnore: /responsive/,
+      use: { viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'laptop',
+      testMatch: /responsive/,
+      use: { viewport: { width: 1024, height: 768 } },
+    },
+    {
+      name: 'mobile',
+      testMatch: /responsive/,
+      use: { viewport: { width: 390, height: 844 } },
+    },
+  ],
   webServer: {
     command: 'python3 backend/server.py',
     port: 8788,
